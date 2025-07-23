@@ -19,7 +19,7 @@ class CartController extends Controller
     {
         $user = Auth::user();
 
-        $query = Cart::with(['items.menu.merchant', 'merchant'])
+        $query = Cart::with(['cartItems.menu.merchant', 'merchant'])
             ->forUser($user->id)
             ->active();
 
@@ -109,7 +109,7 @@ class CartController extends Controller
             DB::commit();
 
             // Load fresh cart with relations
-            $cart->load(['items.menu.merchant', 'merchant']);
+            $cart->load(['cartItems.menu.merchant', 'merchant']);
 
             return response()->json([
                 'message' => 'Item added to cart successfully',
@@ -150,7 +150,7 @@ class CartController extends Controller
             'notes' => $request->notes
         ]);
 
-        $cart = $cartItem->cart->load(['items.menu.merchant', 'merchant']);
+        $cart = $cartItem->cart->load(['cartItems.menu.merchant', 'merchant']);
 
         return response()->json([
             'message' => 'Cart item updated successfully',
@@ -181,7 +181,7 @@ class CartController extends Controller
             ]);
         }
 
-        $cart->load(['items.menu.merchant', 'merchant']);
+        $cart->load(['cartItems.menu.merchant', 'merchant']);
 
         return response()->json([
             'message' => 'Item removed from cart successfully',
@@ -223,7 +223,7 @@ class CartController extends Controller
         ]);
 
         $user = Auth::user();
-        $cart = Cart::with(['items.menu', 'merchant'])
+        $cart = Cart::with(['cartItems.menu', 'merchant'])
             ->forUser($user->id)
             ->forMerchant($merchantId)
             ->active()
@@ -275,7 +275,7 @@ class CartController extends Controller
 
             return response()->json([
                 'message' => 'Checkout successful',
-                'transaction' => $transaction->load(['items.menu', 'paymentMethod'])
+                'transaction' => $transaction->load(['transactionItems.menu', 'paymentMethod'])
             ]);
         } catch (\Exception $e) {
             DB::rollback();

@@ -11,25 +11,25 @@ class Cart extends Model
 
     protected $fillable = [
         'user_id',
-        'session_id',
-        'total_amount',
-        'tax_amount',
-        'discount_amount',
-        'final_amount',
+        'merchant_id',
         'status',
+        'total_amount',
+        'notes',
     ];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
-        'tax_amount' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
-        'final_amount' => 'decimal:2',
     ];
 
     // Relationships
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function merchant()
+    {
+        return $this->belongsTo(User::class, 'merchant_id');
     }
 
     public function cartItems()
@@ -41,7 +41,6 @@ class Cart extends Model
     public function recalculateTotal()
     {
         $this->total_amount = $this->cartItems()->sum('total_price');
-        $this->final_amount = $this->total_amount + $this->tax_amount - $this->discount_amount;
         $this->save();
 
         return $this->total_amount;
@@ -85,5 +84,21 @@ class Cart extends Model
     {
         $this->cartItems()->delete();
         $this->recalculateTotal();
+    }
+
+    // Query Scopes
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeForMerchant($query, $merchantId)
+    {
+        return $query->where('merchant_id', $merchantId);
     }
 }
