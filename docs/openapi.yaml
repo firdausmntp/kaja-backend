@@ -1,0 +1,3568 @@
+openapi: 3.0.3
+info:
+  title: Kaja (Kantin Jawara) API
+  description: |
+    # Kaja API Documentation
+
+    API for **Kaja (Kantin Jawara)** canteen management system - a comprehensive solution for restaurant and food court operations.
+
+    ## 🚀 Features
+
+    - **Authentication System** - Secure user registration, login, and profile management
+    - **Multi-Role Support** - Admin, Seller (Penjual), and Buyer (Pembeli) roles
+    - **Menu Management** - Complete CRUD operations for food items and categories
+    - **Smart Cart System** - Automatic price calculations, merchant-specific carts, and real-time updates
+    - **Transaction Processing** - Order creation, status tracking, and management
+    - **Payment Integration** - Multiple payment methods (Cash, Bank Transfer, E-Wallet)
+    - **Real-time Chat** - Transaction-based messaging between buyers and sellers
+    - **File Upload Support** - Images and documents for chat and payment proof
+
+    ## 🛒 Cart Management
+
+    The cart system provides intelligent shopping cart functionality with automatic calculations:
+
+    - **Merchant-specific carts** - Separate carts for each merchant/seller
+    - **Automatic price calculation** - Total prices calculated automatically based on quantity and unit price
+    - **Real-time updates** - Cart totals recalculated instantly when items are added, updated, or removed
+    - **Smart item management** - Duplicate items are merged with updated quantities
+    - **Persistent storage** - Carts are saved and maintained across sessions
+
+    ## 📋 Changelog
+
+    ### Version 2.1.0 (2025-07-23)
+    - Enhanced cart system documentation with automatic calculation details
+    - Improved CartItem and Cart schema definitions with better validation
+    - Added comprehensive error handling examples for cart operations
+    - Updated decimal precision specifications for price fields
+    - Enhanced business rules documentation for cart management
+
+    ## 🔐 Authentication
+
+    Most endpoints require Bearer token authentication. Get your token by logging in via the `/login` endpoint.
+
+    ```
+    Authorization: Bearer your_token_here
+    ```
+
+    ## 💬 Chat System
+
+    Transaction-based chat system enables real-time communication between buyers and sellers. 
+    Features include:
+    - Text messaging
+    - File attachments (images, documents)
+    - Read/unread status tracking
+    - Real-time notifications
+
+    ## 🏷️ User Roles
+
+    - **Admin**: Full system access, manage categories and payment methods
+    - **Penjual (Seller)**: Manage menus, view transactions, handle orders
+    - **Pembeli (Buyer)**: Browse menus, create orders, make payments, chat with sellers
+
+    ## 📱 Base URL
+
+    Production: `https://semenjana.biz.id/kaja/api`
+
+  version: 2.1.0
+  contact:
+    name: Kaja API Support
+    email: support@semenjana.biz.id
+    url: https://semenjana.biz.id
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://semenjana.biz.id/kaja/api
+    description: Production server
+  - url: http://localhost:8000/api
+    description: Local development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /register:
+    post:
+      tags:
+        - 🔐 Authentication
+      summary: Register new user
+      description: |
+        Register a new user to the system. 
+
+        **Available roles:**
+        - `admin` - Full system access
+        - `penjual` - Seller/merchant access
+        - `pembeli` - Customer access
+
+        **Note:** Admin accounts may require approval.
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+            examples:
+              customer:
+                summary: Register as Customer
+                value:
+                  name: John Doe
+                  email: john@example.com
+                  password: password123
+                  password_confirmation: password123
+                  role: pembeli
+              seller:
+                summary: Register as Seller
+                value:
+                  name: Warung Makan Sederhana
+                  email: warung@example.com
+                  password: password123
+                  password_confirmation: password123
+                  role: penjual
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSuccessResponse"
+              examples:
+                success:
+                  summary: Registration successful
+                  value:
+                    user:
+                      id: 1
+                      name: John Doe
+                      email: john@example.com
+                      role: pembeli
+                      created_at: "2025-07-23T10:00:00Z"
+                    token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                    message: "User registered successfully"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+              examples:
+                validation_error:
+                  summary: Validation failed
+                  value:
+                    message: "The given data was invalid."
+                    errors:
+                      email: ["The email has already been taken."]
+                      password: ["The password confirmation does not match."]
+
+  /login:
+    post:
+      tags:
+        - 🔐 Authentication
+      summary: User login
+      description: |
+        Authenticate user and receive access token.
+
+        **Test Accounts:**
+        - Admin: `admin@mail.com` / `password`
+        - Seller: `penjual@mail.com` / `password`
+        - Customer: `pembeli@mail.com` / `password`
+      operationId: loginUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            examples:
+              admin:
+                summary: Admin Login
+                value:
+                  email: admin@mail.com
+                  password: password
+              seller:
+                summary: Seller Login
+                value:
+                  email: penjual@mail.com
+                  password: password
+              customer:
+                summary: Customer Login
+                value:
+                  email: pembeli@mail.com
+                  password: password
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSuccessResponse"
+              examples:
+                success:
+                  summary: Login successful
+                  value:
+                    user:
+                      id: 1
+                      name: Admin User
+                      email: admin@mail.com
+                      role: admin
+                    token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                    message: "Login successful"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid_credentials:
+                  summary: Invalid login
+                  value:
+                    message: "Invalid credentials"
+
+  /profile:
+    get:
+      tags:
+        - 🔐 Authentication
+      summary: Get user profile
+      description: Get the authenticated user's profile information
+      operationId: getUserProfile
+      responses:
+        "200":
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+              examples:
+                admin_profile:
+                  summary: Admin Profile
+                  value:
+                    user:
+                      id: 1
+                      name: Admin User
+                      email: admin@mail.com
+                      role: admin
+                      created_at: "2025-01-01T00:00:00Z"
+                      updated_at: "2025-07-23T10:00:00Z"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    put:
+      tags:
+        - 🔐 Authentication
+      summary: Update user profile
+      description: Update the authenticated user's profile information (name and email)
+      operationId: updateUserProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+            examples:
+              update_profile:
+                summary: Update profile
+                value:
+                  name: John Doe Updated
+                  email: john.updated@example.com
+      responses:
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+                  message:
+                    type: string
+                    example: "Profile updated successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /logout:
+    post:
+      tags:
+        - 🔐 Authentication
+      summary: Logout user
+      description: Logout the authenticated user and invalidate the current token
+      operationId: logoutUser
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logout successful"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /change-password:
+    put:
+      tags:
+        - 🔐 Authentication
+      summary: Change password
+      description: |
+        Change the user's password. Requires current password for security.
+
+        **Note:** After successful password change, all existing tokens will be invalidated.
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+            examples:
+              change_password:
+                summary: Change password
+                value:
+                  current_password: oldpassword123
+                  new_password: newpassword123
+                  new_password_confirmation: newpassword123
+      responses:
+        "200":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password changed successfully. Please login again."
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /delete-account:
+    delete:
+      tags:
+        - 🔐 Authentication
+      summary: Delete user account
+      description: |
+        Permanently delete the user account. This action cannot be undone.
+
+        **Security:** Requires password confirmation and explicit "DELETE" confirmation.
+      operationId: deleteAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteAccountRequest"
+            examples:
+              delete_account:
+                summary: Delete account
+                value:
+                  password: password123
+                  confirmation: DELETE
+      responses:
+        "200":
+          description: Account deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Account deleted successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /categories:
+    get:
+      tags:
+        - 🌍 Public APIs
+      summary: Get all categories
+      description: Get all available food categories (public endpoint)
+      operationId: getCategories
+      security: []
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Category"
+              examples:
+                categories:
+                  summary: Available categories
+                  value:
+                    data:
+                      - id: 1
+                        name: Makanan Berat
+                        created_at: "2025-01-01T00:00:00Z"
+                        updated_at: "2025-01-01T00:00:00Z"
+                      - id: 2
+                        name: Makanan Ringan
+                        created_at: "2025-01-01T00:00:00Z"
+                        updated_at: "2025-01-01T00:00:00Z"
+                      - id: 3
+                        name: Minuman
+                        created_at: "2025-01-01T00:00:00Z"
+                        updated_at: "2025-01-01T00:00:00Z"
+
+    post:
+      tags:
+        - 👑 Admin APIs
+      summary: Create category
+      description: Create a new food category (Admin only)
+      operationId: createCategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+            examples:
+              new_category:
+                summary: Create new category
+                value:
+                  name: Makanan Penutup
+      responses:
+        "201":
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Category"
+                  message:
+                    type: string
+                    example: "Category created successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /categories/{id}:
+    put:
+      tags:
+        - 👑 Admin APIs
+      summary: Update category
+      description: Update an existing category (Admin only)
+      operationId: updateCategory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Category ID
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+            examples:
+              update_category:
+                summary: Update category
+                value:
+                  name: Makanan Utama
+      responses:
+        "200":
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Category"
+                  message:
+                    type: string
+                    example: "Category updated successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags:
+        - 👑 Admin APIs
+      summary: Delete category
+      description: Delete a category (Admin only)
+      operationId: deleteCategory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Category ID
+          example: 1
+      responses:
+        "200":
+          description: Category deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Category deleted successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /transactions/{id}/chats:
+    get:
+      tags:
+        - 💬 Chat System
+      summary: Get chat messages
+      description: |
+        Get all chat messages for a specific transaction.
+
+        **Features:**
+        - Automatically marks messages as read
+        - Returns messages in chronological order
+        - Includes sender information and attachments
+      operationId: getChatMessages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Transaction ID
+          example: 1
+      responses:
+        "200":
+          description: Chat messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ChatMessage"
+              examples:
+                chat_messages:
+                  summary: Chat conversation
+                  value:
+                    data:
+                      - id: 1
+                        transaction_id: 1
+                        user_id: 2
+                        message: "Halo, kapan pesanan saya siap?"
+                        message_type: text
+                        attachment_url: null
+                        is_read: true
+                        sender:
+                          id: 2
+                          name: John Doe
+                          role: pembeli
+                        created_at: "2025-07-23T10:00:00Z"
+                      - id: 2
+                        transaction_id: 1
+                        user_id: 1
+                        message: "Pesanan sedang diproses, sekitar 15 menit lagi"
+                        message_type: text
+                        attachment_url: null
+                        is_read: true
+                        sender:
+                          id: 1
+                          name: Warung Makan
+                          role: penjual
+                        created_at: "2025-07-23T10:05:00Z"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+    post:
+      tags:
+        - 💬 Chat System
+      summary: Send message
+      description: |
+        Send a text message or message with file attachment in a transaction conversation.
+
+        **Message Types:**
+        - `text` - Plain text message
+        - `image` - Image attachment (JPG, PNG, GIF)
+        - `document` - Document attachment (PDF, DOC, etc.)
+
+        **File Limits:**
+        - Maximum file size: 10MB
+        - Supported formats: Images, Documents
+      operationId: sendChatMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Transaction ID
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendTextMessageRequest"
+            examples:
+              text_message:
+                summary: Send text message
+                value:
+                  message: "Terima kasih, saya tunggu ya!"
+                  message_type: text
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/SendFileMessageRequest"
+            examples:
+              image_message:
+                summary: Send message with image
+                value:
+                  message: "Ini bukti transfer pembayaran"
+                  message_type: image
+                  attachment: "[binary file data]"
+      responses:
+        "201":
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ChatMessage"
+                  message:
+                    type: string
+                    example: "Message sent successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /chats:
+    get:
+      tags:
+        - 💬 Chat System
+      summary: Get chat list
+      description: |
+        Get list of all chat conversations based on transactions.
+
+        **Returns:**
+        - Latest message in each conversation
+        - Unread message count per conversation
+        - Transaction details
+      operationId: getChatList
+      responses:
+        "200":
+          description: Chat list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ChatConversation"
+              examples:
+                chat_list:
+                  summary: User's chat conversations
+                  value:
+                    data:
+                      - transaction_id: 1
+                        transaction:
+                          id: 1
+                          total_price: 50000
+                          status: confirmed
+                          customer_name: John Doe
+                        latest_message:
+                          id: 5
+                          message: "Pesanan sudah siap, silakan diambil"
+                          message_type: text
+                          sender:
+                            name: Warung Makan
+                            role: penjual
+                          created_at: "2025-07-23T11:00:00Z"
+                        unread_count: 1
+                        other_participant:
+                          id: 1
+                          name: Warung Makan
+                          role: penjual
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /chats/unread-count:
+    get:
+      tags:
+        - 💬 Chat System
+      summary: Get unread message count
+      description: Get total count of unread messages across all conversations
+      operationId: getUnreadCount
+      responses:
+        "200":
+          description: Unread count retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unread_count:
+                    type: integer
+                    description: Total number of unread messages
+                    example: 5
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /chats/{id}:
+    delete:
+      tags:
+        - 💬 Chat System
+      summary: Delete message
+      description: |
+        Delete a chat message.
+
+        **Note:** Only the message sender can delete their own messages.
+      operationId: deleteChatMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Message ID
+          example: 1
+      responses:
+        "200":
+          description: Message deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Message deleted successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /menus:
+    get:
+      tags:
+        - 🍽️ Menu Management
+      summary: Get all menus
+      description: |
+        Get all available menu items.
+
+        **Features:**
+        - Includes category information
+        - Shows availability status
+        - Pagination support
+      operationId: getMenus
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by category ID
+          example: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search menu by name or description
+          example: "nasi goreng"
+        - name: available_only
+          in: query
+          schema:
+            type: boolean
+          description: Show only available items (stock > 0)
+          example: true
+      responses:
+        "200":
+          description: Menus retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Menu"
+              examples:
+                menu_list:
+                  summary: Available menus
+                  value:
+                    data:
+                      - id: 1
+                        name: Nasi Goreng Spesial
+                        description: Nasi goreng dengan telur dan ayam
+                        price: 25000
+                        stock: 10
+                        category:
+                          id: 1
+                          name: Makanan Berat
+                        image_url: https://example.com/nasigoreng.jpg
+                        merchant:
+                          id: 2
+                          name: Warung Pak Joni
+                        created_at: "2025-01-01T00:00:00Z"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    post:
+      tags:
+        - 🛒 Seller APIs
+      summary: Create menu item
+      description: Create a new menu item (Seller only)
+      operationId: createMenu
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMenuRequest"
+            examples:
+              new_menu:
+                summary: Create new menu
+                value:
+                  name: Nasi Goreng Spesial
+                  description: Nasi goreng dengan telur dan ayam
+                  price: 25000
+                  stock: 10
+                  category_id: 1
+                  image_url: https://example.com/nasigoreng.jpg
+      responses:
+        "201":
+          description: Menu created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Menu"
+                  message:
+                    type: string
+                    example: "Menu created successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /menus/{id}:
+    get:
+      tags:
+        - 🍽️ Menu Management
+      summary: Get menu details
+      description: Get detailed information about a specific menu item
+      operationId: getMenuDetails
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Menu ID
+          example: 1
+      responses:
+        "200":
+          description: Menu details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Menu"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+    put:
+      tags:
+        - 🛒 Seller APIs
+      summary: Update menu item
+      description: Update an existing menu item (Seller only)
+      operationId: updateMenu
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Menu ID
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMenuRequest"
+            examples:
+              update_menu:
+                summary: Update menu
+                value:
+                  name: Nasi Goreng Premium
+                  description: Nasi goreng dengan telur, ayam, dan udang
+                  price: 35000
+                  stock: 5
+                  category_id: 1
+                  image_url: https://example.com/nasigoreng-premium.jpg
+      responses:
+        "200":
+          description: Menu updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Menu"
+                  message:
+                    type: string
+                    example: "Menu updated successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags:
+        - 🛒 Seller APIs
+      summary: Delete menu item
+      description: Delete a menu item (Seller only)
+      operationId: deleteMenu
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Menu ID
+          example: 1
+      responses:
+        "200":
+          description: Menu deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Menu deleted successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /transactions:
+    post:
+      tags:
+        - 🛒 Customer APIs
+      summary: Create transaction
+      description: |
+        Create a new transaction/order.
+
+        **Order Types:**
+        - `takeaway` - Customer picks up the order
+        - `dine_in` - Customer eats at the restaurant
+        - `delivery` - Order delivered to customer
+
+        **Order Flow:**
+        1. Create transaction
+        2. Make payment
+        3. Seller confirms order
+        4. Order preparation
+        5. Order ready/completed
+      operationId: createTransaction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionRequest"
+            examples:
+              basic_order:
+                summary: Basic order
+                value:
+                  total_price: 50000
+                  items:
+                    - menu_id: 1
+                      quantity: 2
+                      price: 25000
+              complete_order:
+                summary: Complete order with details
+                value:
+                  total_price: 75000
+                  items:
+                    - menu_id: 1
+                      quantity: 2
+                      price: 25000
+                    - menu_id: 2
+                      quantity: 1
+                      price: 25000
+                  notes: "Pedas sedang, tanpa bawang, pakai nasi putih extra"
+                  customer_name: "Budi Santoso"
+                  customer_phone: "081234567890"
+                  order_type: "takeaway"
+      responses:
+        "201":
+          description: Transaction created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Transaction"
+                  message:
+                    type: string
+                    example: "Transaction created successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /transactions/{id}:
+    get:
+      tags:
+        - 📦 Transaction Management
+      summary: Get transaction details
+      description: Get detailed information about a specific transaction
+      operationId: getTransactionDetails
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Transaction ID
+          example: 1
+      responses:
+        "200":
+          description: Transaction details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TransactionDetails"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+    delete:
+      tags:
+        - 🛒 Customer APIs
+      summary: Cancel transaction
+      description: Cancel a transaction (only if not yet paid or confirmed)
+      operationId: cancelTransaction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Transaction ID
+          example: 1
+      responses:
+        "200":
+          description: Transaction cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Transaction cancelled successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /payments:
+    post:
+      tags:
+        - 💳 Payment Management
+      summary: Create payment
+      description: |
+        Create a payment for a transaction.
+
+        **Payment Methods:**
+        - `Cash` - Pay in person
+        - `Bank Transfer` - Transfer to bank account (requires proof)
+        - `E-Wallet` - Digital wallet payment (requires proof)
+
+        **Note:** For non-cash payments, upload payment proof using the file upload.
+      operationId: createPayment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentRequest"
+            examples:
+              cash_payment:
+                summary: Cash payment
+                value:
+                  transaction_id: 1
+                  amount: 50000
+                  method: Cash
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentWithProofRequest"
+            examples:
+              transfer_payment:
+                summary: Bank transfer with proof
+                value:
+                  transaction_id: 1
+                  amount: 50000
+                  method: Bank Transfer
+                  proof: "[binary file data]"
+      responses:
+        "201":
+          description: Payment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Payment"
+                  message:
+                    type: string
+                    example: "Payment created successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /payment-methods:
+    get:
+      tags:
+        - 🌍 Public APIs
+      summary: Get payment methods
+      description: Get all available global payment methods
+      operationId: getPaymentMethods
+      security: []
+      responses:
+        "200":
+          description: Payment methods retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PaymentMethod"
+              examples:
+                payment_methods:
+                  summary: Available payment methods
+                  value:
+                    data:
+                      - id: 1
+                        name: Cash
+                        description: Pembayaran tunai
+                        is_active: true
+                      - id: 2
+                        name: Bank Transfer
+                        description: Transfer bank
+                        is_active: true
+                      - id: 3
+                        name: E-Wallet
+                        description: Dompet digital
+                        is_active: true
+
+  # === ADMIN MANAGEMENT ENDPOINTS ===
+  /admin/users:
+    get:
+      tags:
+        - 👑 Admin APIs
+      summary: Get all users (Admin only)
+      description: Retrieve a list of all users in the system with filtering and pagination
+      operationId: adminListUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: per_page
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            default: 15
+        - name: role
+          in: query
+          description: Filter by user role
+          schema:
+            type: string
+            enum: [admin, penjual, pembeli]
+        - name: search
+          in: query
+          description: Search by name or email
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Users retrieved successfully"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+
+  /admin/transactions:
+    get:
+      tags:
+        - 👑 Admin APIs
+      summary: Get all transactions (Admin only)
+      description: Retrieve a list of all transactions in the system with filtering and statistics
+      operationId: adminListTransactions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: per_page
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            default: 15
+        - name: status
+          in: query
+          description: Filter by transaction status
+          schema:
+            type: string
+            enum:
+              [pending, paid, confirmed, preparing, ready, completed, cancelled]
+        - name: date_from
+          in: query
+          description: Filter from date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          description: Filter to date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: search
+          in: query
+          description: Search by customer name or phone
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Transactions retrieved successfully"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Transaction"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+                  statistics:
+                    type: object
+                    properties:
+                      total_transactions:
+                        type: integer
+                      total_revenue:
+                        type: number
+                      pending_transactions:
+                        type: integer
+                      completed_transactions:
+                        type: integer
+                      today_transactions:
+                        type: integer
+                      today_revenue:
+                        type: number
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+
+  /admin/dashboard:
+    get:
+      tags:
+        - 👑 Admin APIs
+      summary: Get dashboard statistics (Admin only)
+      description: Retrieve comprehensive dashboard statistics for admin panel
+      operationId: adminDashboardStats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Dashboard statistics retrieved successfully"
+                  data:
+                    type: object
+                    properties:
+                      users:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                            example: 1500
+                          admins:
+                            type: integer
+                            example: 5
+                          sellers:
+                            type: integer
+                            example: 150
+                          customers:
+                            type: integer
+                            example: 1345
+                          new_today:
+                            type: integer
+                            example: 25
+                      transactions:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                            example: 2340
+                          pending:
+                            type: integer
+                            example: 45
+                          completed:
+                            type: integer
+                            example: 2200
+                          cancelled:
+                            type: integer
+                            example: 95
+                          today:
+                            type: integer
+                            example: 67
+                      revenue:
+                        type: object
+                        properties:
+                          total:
+                            type: number
+                            example: 45000000
+                          today:
+                            type: number
+                            example: 1250000
+                          average_order:
+                            type: number
+                            example: 75000
+                      menus:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                            example: 450
+                          available:
+                            type: integer
+                            example: 380
+                          out_of_stock:
+                            type: integer
+                            example: 70
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+
+  /admin/users/{id}:
+    get:
+      tags:
+        - 👑 Admin APIs
+      summary: Get user details (Admin only)
+      description: Retrieve detailed information about a specific user
+      operationId: adminGetUserDetails
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            example: 123
+      responses:
+        "200":
+          description: User details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "User details retrieved successfully"
+                  data:
+                    $ref: "#/components/schemas/User"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          description: Server error
+
+  /admin/transactions/{id}:
+    get:
+      tags:
+        - 👑 Admin APIs
+      summary: Get transaction details (Admin only)
+      description: Retrieve detailed information about a specific transaction
+      operationId: adminGetTransactionDetails
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Transaction ID
+          schema:
+            type: integer
+            example: 456
+      responses:
+        "200":
+          description: Transaction details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Transaction details retrieved successfully"
+                  data:
+                    $ref: "#/components/schemas/Transaction"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          description: Server error
+
+  # === CART MANAGEMENT ENDPOINTS ===
+  /cart:
+    get:
+      tags:
+        - 🛒 Customer APIs
+      summary: Get all user carts
+      description: Get all active carts for the authenticated customer
+      operationId: getAllCarts
+      responses:
+        "200":
+          description: Carts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Cart"
+                  total_amount:
+                    type: number
+                    format: decimal
+                    example: 150000
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    delete:
+      tags:
+        - 🛒 Customer APIs
+      summary: Clear all carts
+      description: Clear all active carts for the authenticated customer
+      operationId: clearAllCarts
+      responses:
+        "200":
+          description: All carts cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "All carts cleared successfully"
+                  cleared_carts:
+                    type: integer
+                    example: 2
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /cart/{merchantId}:
+    get:
+      tags:
+        - 🛒 Customer APIs
+      summary: Get cart for specific merchant
+      description: Get cart for a specific merchant
+      operationId: getCartByMerchant
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          description: Merchant ID
+          schema:
+            type: integer
+            example: 2
+      responses:
+        "200":
+          description: Cart retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Cart retrieved successfully"
+                  data:
+                    $ref: "#/components/schemas/Cart"
+                  total_items:
+                    type: integer
+                    example: 3
+                  total_amount:
+                    type: number
+                    format: decimal
+                    example: 75000
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    delete:
+      tags:
+        - 🛒 Customer APIs
+      summary: Clear cart for specific merchant
+      description: Clear cart for a specific merchant
+      operationId: clearCartByMerchant
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          description: Merchant ID
+          schema:
+            type: integer
+            example: 2
+      responses:
+        "200":
+          description: Cart cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Cart cleared successfully"
+                  cleared_carts:
+                    type: integer
+                    example: 1
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /cart/add:
+    post:
+      tags:
+        - 🛒 Customer APIs
+      summary: Add item to cart
+      description: |
+        Add a menu item to the shopping cart. If the item already exists in the cart for the same merchant, 
+        the quantity will be incremented and notes will be updated.
+
+        **Automatic calculations:**
+        - Item total price is automatically calculated (quantity × unit_price)
+        - Cart total amount is automatically recalculated
+        - Final amount includes tax and discount calculations
+
+        **Business rules:**
+        - Each cart is merchant-specific
+        - Maximum quantity per item is 100
+        - Notes are optional and limited to 255 characters
+      operationId: addItemToCart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - menu_id
+                - quantity
+              properties:
+                menu_id:
+                  type: integer
+                  example: 5
+                quantity:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  example: 2
+                notes:
+                  type: string
+                  maxLength: 255
+                  example: "Extra spicy, no onions"
+            examples:
+              add_new_item:
+                summary: Add new item to cart
+                value:
+                  menu_id: 5
+                  quantity: 2
+                  notes: "Extra spicy, no onions"
+              add_existing_item:
+                summary: Add to existing item (quantity will be incremented)
+                value:
+                  menu_id: 3
+                  quantity: 1
+                  notes: "Updated notes"
+              bulk_add:
+                summary: Add multiple quantities
+                value:
+                  menu_id: 7
+                  quantity: 5
+                  notes: "For office lunch"
+      responses:
+        "200":
+          description: Item added to cart successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Item added to cart successfully"
+                  data:
+                    $ref: "#/components/schemas/Cart"
+                  added_item:
+                    $ref: "#/components/schemas/CartItem"
+                examples:
+                  success:
+                    summary: Item added successfully
+                    value:
+                      message: "Item added to cart successfully"
+                      data:
+                        id: 1
+                        user_id: 2
+                        total_amount: 75000.00
+                        final_amount: 75000.00
+                        status: "active"
+                        total_items: 3
+                      added_item:
+                        id: 15
+                        cart_id: 1
+                        menu_id: 5
+                        quantity: 2
+                        unit_price: 25000.00
+                        total_price: 50000.00
+                        notes: "Extra spicy, no onions"
+        "400":
+          description: Menu item not available or cart operation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                menu_unavailable:
+                  summary: Menu item not available
+                  value:
+                    message: "Menu item is not available"
+                stock_insufficient:
+                  summary: Insufficient stock
+                  value:
+                    message: "Insufficient stock for requested quantity"
+                invalid_quantity:
+                  summary: Invalid quantity
+                  value:
+                    message: "Quantity must be between 1 and 100"
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /cart/items/{itemId}:
+    put:
+      tags:
+        - 🛒 Customer APIs
+      summary: Update cart item
+      description: |
+        Update quantity or notes for a cart item. Setting quantity to 0 will remove the item from the cart.
+
+        **Automatic calculations:**
+        - Item total price is automatically recalculated when quantity or unit price changes
+        - Cart total amount is automatically recalculated
+        - Final amount is updated to reflect changes
+
+        **Business rules:**
+        - Setting quantity to 0 removes the item
+        - Maximum quantity per item is 100
+        - Notes can be updated independently
+      operationId: updateCartItem
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: Cart item ID
+          schema:
+            type: integer
+            example: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quantity
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  example: 3
+                  description: |
+                    New quantity for the cart item.
+                    - Setting to 0 will remove the item from the cart
+                    - Values 1-100 will update the item quantity
+                    - Total price will be automatically recalculated
+                notes:
+                  type: string
+                  maxLength: 255
+                  example: "Medium spice level"
+            examples:
+              update_item:
+                summary: Update cart item
+                value:
+                  quantity: 3
+                  notes: "Medium spice level"
+      responses:
+        "200":
+          description: Cart item updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Cart item updated successfully"
+                  data:
+                    $ref: "#/components/schemas/Cart"
+                  updated_item:
+                    $ref: "#/components/schemas/CartItem"
+              examples:
+                success:
+                  summary: Item updated successfully
+                  value:
+                    message: "Cart item updated successfully"
+                    data:
+                      id: 1
+                      user_id: 2
+                      total_amount: 100000.00
+                      final_amount: 100000.00
+                      status: "active"
+                      total_items: 4
+                    updated_item:
+                      id: 15
+                      cart_id: 1
+                      menu_id: 5
+                      quantity: 3
+                      unit_price: 25000.00
+                      total_price: 75000.00
+                      notes: "Medium spice level"
+                quantity_zero:
+                  summary: Item removed when quantity is zero
+                  value:
+                    message: "Cart item removed (quantity set to zero)"
+                    data:
+                      id: 1
+                      user_id: 2
+                      total_amount: 50000.00
+                      final_amount: 50000.00
+                      status: "active"
+                      total_items: 2
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags:
+        - 🛒 Customer APIs
+      summary: Remove item from cart
+      description: |
+        Remove a specific item from the cart permanently.
+
+        **Automatic calculations:**
+        - Cart total amount is automatically recalculated after item removal
+        - Final amount is updated to reflect the removal
+        - If this was the last item, the cart remains active but empty
+      operationId: removeCartItem
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: Cart item ID
+          schema:
+            type: integer
+            example: 15
+      responses:
+        "200":
+          description: Item removed from cart successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Item removed from cart successfully"
+                  data:
+                    $ref: "#/components/schemas/Cart"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /cart/{merchantId}/checkout:
+    post:
+      tags:
+        - 🛒 Customer APIs
+      summary: Checkout cart
+      description: Convert cart to transaction for a specific merchant
+      operationId: checkoutCart
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          description: Merchant ID
+          schema:
+            type: integer
+            example: 2
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  maxLength: 500
+                  example: "Please prepare food quickly"
+            examples:
+              checkout:
+                summary: Checkout cart
+                value:
+                  notes: "Please prepare food quickly"
+      responses:
+        "201":
+          description: Transaction created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Transaction created successfully"
+                  data:
+                    $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Cart is empty or items unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # === MERCHANT PAYMENT METHODS ===
+  /merchant-payment-methods:
+    get:
+      tags:
+        - 🛒 Seller APIs
+      summary: Get merchant payment methods
+      description: Get all payment methods configured by the merchant
+      operationId: getMerchantPaymentMethods
+      responses:
+        "200":
+          description: Merchant payment methods retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MerchantPaymentMethod"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+    post:
+      tags:
+        - 🛒 Seller APIs
+      summary: Add payment method
+      description: Add a new payment method for the merchant
+      operationId: addMerchantPaymentMethod
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_method_id
+              properties:
+                payment_method_id:
+                  type: integer
+                  example: 2
+                account_number:
+                  type: string
+                  example: "1234567890"
+                account_name:
+                  type: string
+                  example: "Warung Makan Sederhana"
+                is_active:
+                  type: boolean
+                  example: true
+            examples:
+              bank_transfer:
+                summary: Add bank transfer
+                value:
+                  payment_method_id: 2
+                  account_number: "1234567890"
+                  account_name: "Warung Makan Sederhana"
+                  is_active: true
+      responses:
+        "201":
+          description: Payment method added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Payment method added successfully"
+                  data:
+                    $ref: "#/components/schemas/MerchantPaymentMethod"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /merchant-payment-methods/{id}:
+    get:
+      tags:
+        - 🛒 Seller APIs
+      summary: Get merchant payment method details
+      description: Get details of a specific merchant payment method
+      operationId: getMerchantPaymentMethod
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Merchant payment method ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Merchant payment method retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/MerchantPaymentMethod"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+    put:
+      tags:
+        - 🛒 Seller APIs
+      summary: Update merchant payment method
+      description: Update merchant payment method details
+      operationId: updateMerchantPaymentMethod
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Merchant payment method ID
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account_number:
+                  type: string
+                  example: "9876543210"
+                account_name:
+                  type: string
+                  example: "Warung Updated Name"
+                is_active:
+                  type: boolean
+                  example: false
+      responses:
+        "200":
+          description: Payment method updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Payment method updated successfully"
+                  data:
+                    $ref: "#/components/schemas/MerchantPaymentMethod"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags:
+        - 🛒 Seller APIs
+      summary: Delete merchant payment method
+      description: Remove a payment method from merchant
+      operationId: deleteMerchantPaymentMethod
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Merchant payment method ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Payment method deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Payment method deleted successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /merchants/{merchantId}/payment-methods:
+    get:
+      tags:
+        - 🌍 Public APIs
+      summary: Get available payment methods for merchant
+      description: Get all available payment methods for a specific merchant
+      operationId: getMerchantAvailablePaymentMethods
+      security: []
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          description: Merchant ID
+          schema:
+            type: integer
+            example: 2
+      responses:
+        "200":
+          description: Available payment methods retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MerchantPaymentMethod"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  # === SELLER SPECIFIC ENDPOINTS ===
+  /penjual/menus:
+    get:
+      tags:
+        - 🛒 Seller APIs
+      summary: Get seller's menus
+      description: Get all menus owned by the authenticated seller
+      operationId: getSellerMenus
+      responses:
+        "200":
+          description: Seller menus retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Menu"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  /penjual/transactions:
+    get:
+      tags:
+        - 🛒 Seller APIs
+      summary: Get seller's transactions
+      description: Get all transactions for the authenticated seller
+      operationId: getSellerTransactions
+      responses:
+        "200":
+          description: Seller transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Transaction"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  /penjual/transactions/{id}:
+    get:
+      tags:
+        - 🛒 Seller APIs
+      summary: Get seller transaction details
+      description: Get detailed information about a specific transaction
+      operationId: getSellerTransactionDetails
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Transaction ID
+          schema:
+            type: integer
+            example: 123
+      responses:
+        "200":
+          description: Transaction details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TransactionDetails"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /penjual/transactions/{id}/status:
+    put:
+      tags:
+        - 🛒 Seller APIs
+      summary: Update transaction status
+      description: Update the status of a transaction (seller only)
+      operationId: updateTransactionStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Transaction ID
+          schema:
+            type: integer
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    [
+                      pending,
+                      paid,
+                      confirmed,
+                      preparing,
+                      ready,
+                      completed,
+                      cancelled,
+                    ]
+                  example: "confirmed"
+            examples:
+              confirm_order:
+                summary: Confirm order
+                value:
+                  status: "confirmed"
+              mark_ready:
+                summary: Mark as ready
+                value:
+                  status: "ready"
+              complete_order:
+                summary: Complete order
+                value:
+                  status: "completed"
+      responses:
+        "200":
+          description: Transaction status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Transaction status updated successfully"
+                  data:
+                    $ref: "#/components/schemas/Transaction"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # === CUSTOMER SPECIFIC ENDPOINTS ===
+  /pembeli/transactions:
+    get:
+      tags:
+        - 🛒 Customer APIs
+      summary: Get customer's transactions
+      description: Get all transactions for the authenticated customer
+      operationId: getCustomerTransactions
+      responses:
+        "200":
+          description: Customer transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Transactions retrieved successfully"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TransactionDetails"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  /payments/proof:
+    post:
+      tags:
+        - 🛒 Customer APIs
+      summary: Upload payment proof
+      description: Upload payment proof for a transaction
+      operationId: uploadPaymentProof
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - transaction_id
+                - proof
+              properties:
+                transaction_id:
+                  type: integer
+                  example: 123
+                proof:
+                  type: string
+                  format: binary
+                  description: Payment proof image (max 2MB)
+            examples:
+              upload_proof:
+                summary: Upload payment proof
+                value:
+                  transaction_id: 123
+                  proof: "[binary file data]"
+      responses:
+        "200":
+          description: Payment proof uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Bukti pembayaran berhasil diupload"
+                  proof_url:
+                    type: string
+                    example: "https://example.com/storage/payment-proofs/proof.jpg"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from login endpoint.
+
+        **Usage:** `Authorization: Bearer your_token_here`
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            unauthorized:
+              summary: Unauthorized access
+              value:
+                message: "Unauthenticated"
+
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            forbidden:
+              summary: Access denied
+              value:
+                message: "This action is unauthorized"
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            not_found:
+              summary: Resource not found
+              value:
+                message: "Resource not found"
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorResponse"
+          examples:
+            validation_failed:
+              summary: Validation failed
+              value:
+                message: "The given data was invalid."
+                errors:
+                  field_name: ["The field is required."]
+
+  schemas:
+    # User-related schemas
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: User ID
+          example: 1
+        name:
+          type: string
+          description: User's full name
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john@example.com"
+        role:
+          type: string
+          enum: [admin, penjual, pembeli]
+          description: User role in the system
+          example: "pembeli"
+        email_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Email verification timestamp
+        created_at:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: "2025-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-07-23T10:00:00Z"
+
+    # Request schemas
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+        - password_confirmation
+        - role
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          description: User's full name
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Valid email address
+          example: "john@example.com"
+        password:
+          type: string
+          minLength: 8
+          description: Password (minimum 8 characters)
+          example: "password123"
+        password_confirmation:
+          type: string
+          description: Password confirmation (must match password)
+          example: "password123"
+        role:
+          type: string
+          enum: [admin, penjual, pembeli]
+          description: User role
+          example: "pembeli"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "admin@mail.com"
+        password:
+          type: string
+          description: User's password
+          example: "password"
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          description: Updated full name
+          example: "John Doe Updated"
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Updated email address
+          example: "john.updated@example.com"
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - current_password
+        - new_password
+        - new_password_confirmation
+      properties:
+        current_password:
+          type: string
+          description: Current password
+          example: "oldpassword123"
+        new_password:
+          type: string
+          minLength: 8
+          description: New password (minimum 8 characters)
+          example: "newpassword123"
+        new_password_confirmation:
+          type: string
+          description: New password confirmation
+          example: "newpassword123"
+
+    DeleteAccountRequest:
+      type: object
+      required:
+        - password
+        - confirmation
+      properties:
+        password:
+          type: string
+          description: Current password for verification
+          example: "password123"
+        confirmation:
+          type: string
+          enum: ["DELETE"]
+          description: Must be exactly "DELETE" to confirm
+          example: "DELETE"
+
+    # Category schemas
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Category ID
+          example: 1
+        name:
+          type: string
+          description: Category name
+          example: "Makanan Berat"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          description: Category name
+          example: "Makanan Penutup"
+
+    # Menu schemas
+    Menu:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Menu ID
+          example: 1
+        name:
+          type: string
+          description: Menu item name
+          example: "Nasi Goreng Spesial"
+        description:
+          type: string
+          nullable: true
+          description: Menu item description
+          example: "Nasi goreng dengan telur dan ayam"
+        price:
+          type: number
+          format: float
+          description: Price in IDR
+          example: 25000
+        stock:
+          type: integer
+          description: Available stock
+          example: 10
+        image_url:
+          type: string
+          nullable: true
+          description: Menu item image URL
+          example: "https://example.com/nasigoreng.jpg"
+        category:
+          $ref: "#/components/schemas/Category"
+        merchant:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 2
+            name:
+              type: string
+              example: "Warung Pak Joni"
+        is_available:
+          type: boolean
+          description: Whether item is available (stock > 0)
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+
+    CreateMenuRequest:
+      type: object
+      required:
+        - name
+        - price
+        - stock
+        - category_id
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          description: Menu item name
+          example: "Nasi Goreng Spesial"
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Menu item description
+          example: "Nasi goreng dengan telur dan ayam"
+        price:
+          type: number
+          format: float
+          minimum: 0
+          description: Price in IDR
+          example: 25000
+        stock:
+          type: integer
+          minimum: 0
+          description: Available stock
+          example: 10
+        category_id:
+          type: integer
+          description: Category ID
+          example: 1
+        image_url:
+          type: string
+          nullable: true
+          format: uri
+          description: Menu item image URL
+          example: "https://example.com/nasigoreng.jpg"
+
+    # Transaction schemas
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 2
+        merchant_id:
+          type: integer
+          example: 1
+        total_price:
+          type: number
+          format: float
+          example: 50000
+        status:
+          type: string
+          enum:
+            [pending, paid, confirmed, preparing, ready, completed, cancelled]
+          example: "pending"
+        notes:
+          type: string
+          nullable: true
+          example: "Pedas sedang, tanpa bawang"
+        customer_name:
+          type: string
+          nullable: true
+          example: "Budi Santoso"
+        customer_phone:
+          type: string
+          nullable: true
+          example: "081234567890"
+        order_type:
+          type: string
+          enum: [takeaway, dine_in, delivery]
+          nullable: true
+          example: "takeaway"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:00:00Z"
+
+    TransactionDetails:
+      allOf:
+        - $ref: "#/components/schemas/Transaction"
+        - type: object
+          properties:
+            customer:
+              $ref: "#/components/schemas/User"
+            merchant:
+              $ref: "#/components/schemas/User"
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/TransactionItem"
+            payment:
+              $ref: "#/components/schemas/Payment"
+              nullable: true
+
+    TransactionItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        transaction_id:
+          type: integer
+          example: 1
+        menu_id:
+          type: integer
+          example: 1
+        quantity:
+          type: integer
+          example: 2
+        price:
+          type: number
+          format: float
+          example: 25000
+        total:
+          type: number
+          format: float
+          example: 50000
+        menu:
+          $ref: "#/components/schemas/Menu"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:00:00Z"
+
+    CreateTransactionRequest:
+      type: object
+      required:
+        - total_price
+        - items
+      properties:
+        total_price:
+          type: number
+          format: float
+          minimum: 0
+          description: Total transaction amount
+          example: 50000
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - menu_id
+              - quantity
+              - price
+            properties:
+              menu_id:
+                type: integer
+                description: Menu item ID
+                example: 1
+              quantity:
+                type: integer
+                minimum: 1
+                description: Quantity ordered
+                example: 2
+              price:
+                type: number
+                format: float
+                minimum: 0
+                description: Price per item
+                example: 25000
+        notes:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Special instructions
+          example: "Pedas sedang, tanpa bawang"
+        customer_name:
+          type: string
+          nullable: true
+          maxLength: 255
+          description: Customer name
+          example: "Budi Santoso"
+        customer_phone:
+          type: string
+          nullable: true
+          maxLength: 20
+          description: Customer phone number
+          example: "081234567890"
+        order_type:
+          type: string
+          enum: [takeaway, dine_in, delivery]
+          nullable: true
+          description: Order type
+          example: "takeaway"
+
+    # Payment schemas
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        transaction_id:
+          type: integer
+          example: 1
+        amount:
+          type: number
+          format: float
+          example: 50000
+        method:
+          type: string
+          example: "Bank Transfer"
+        status:
+          type: string
+          enum: [pending, verified, rejected]
+          example: "pending"
+        proof_url:
+          type: string
+          nullable: true
+          example: "/storage/payment-proofs/proof_123.jpg"
+        notes:
+          type: string
+          nullable: true
+          example: "Transfer dari rekening BCA"
+        verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-07-23T10:30:00Z"
+        verified_by:
+          type: integer
+          nullable: true
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:15:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:30:00Z"
+
+    CreatePaymentRequest:
+      type: object
+      required:
+        - transaction_id
+        - amount
+        - method
+      properties:
+        transaction_id:
+          type: integer
+          description: Transaction ID
+          example: 1
+        amount:
+          type: number
+          format: float
+          minimum: 0
+          description: Payment amount
+          example: 50000
+        method:
+          type: string
+          description: Payment method
+          example: "Cash"
+        notes:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Payment notes
+          example: "Bayar tunai di kasir"
+
+    CreatePaymentWithProofRequest:
+      type: object
+      required:
+        - transaction_id
+        - amount
+        - method
+        - proof
+      properties:
+        transaction_id:
+          type: integer
+          description: Transaction ID
+          example: 1
+        amount:
+          type: number
+          format: float
+          minimum: 0
+          description: Payment amount
+          example: 50000
+        method:
+          type: string
+          description: Payment method
+          example: "Bank Transfer"
+        proof:
+          type: string
+          format: binary
+          description: Payment proof file (max 10MB)
+        notes:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Payment notes
+          example: "Transfer ke BCA"
+
+    PaymentMethod:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Cash"
+        description:
+          type: string
+          nullable: true
+          example: "Pembayaran tunai"
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+
+    # Chat schemas
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        transaction_id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 2
+        message:
+          type: string
+          example: "Halo, kapan pesanan saya siap?"
+        message_type:
+          type: string
+          enum: [text, image, document]
+          example: "text"
+        attachment_url:
+          type: string
+          nullable: true
+          example: "/storage/chat-attachments/file_123.jpg"
+        attachment_name:
+          type: string
+          nullable: true
+          example: "bukti_transfer.jpg"
+        attachment_size:
+          type: integer
+          nullable: true
+          description: File size in bytes
+          example: 1024000
+        is_read:
+          type: boolean
+          example: false
+        sender:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 2
+            name:
+              type: string
+              example: "John Doe"
+            role:
+              type: string
+              enum: [admin, penjual, pembeli]
+              example: "pembeli"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:00:00Z"
+
+    ChatConversation:
+      type: object
+      properties:
+        transaction_id:
+          type: integer
+          example: 1
+        transaction:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            total_price:
+              type: number
+              format: float
+              example: 50000
+            status:
+              type: string
+              example: "confirmed"
+            customer_name:
+              type: string
+              nullable: true
+              example: "John Doe"
+        latest_message:
+          $ref: "#/components/schemas/ChatMessage"
+          nullable: true
+        unread_count:
+          type: integer
+          description: Number of unread messages in this conversation
+          example: 2
+        other_participant:
+          type: object
+          description: The other user in this conversation
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: "Warung Makan"
+            role:
+              type: string
+              enum: [penjual, pembeli]
+              example: "penjual"
+
+    SendTextMessageRequest:
+      type: object
+      required:
+        - message
+        - message_type
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Message text
+          example: "Terima kasih, saya tunggu ya!"
+        message_type:
+          type: string
+          enum: [text]
+          description: Message type
+          example: "text"
+
+    SendFileMessageRequest:
+      type: object
+      required:
+        - message_type
+        - attachment
+      properties:
+        message:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Optional message text
+          example: "Ini bukti transfer pembayaran"
+        message_type:
+          type: string
+          enum: [image, document]
+          description: Message type
+          example: "image"
+        attachment:
+          type: string
+          format: binary
+          description: File attachment (max 10MB)
+
+    # Response schemas
+    AuthSuccessResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+          description: JWT access token
+          example: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+        message:
+          type: string
+          example: "Login successful"
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: "Something went wrong"
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Main error message
+          example: "The given data was invalid."
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Field-specific validation errors
+          example:
+            email: ["The email field is required."]
+            password: ["The password must be at least 8 characters."]
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          description: Current page number
+          example: 1
+        last_page:
+          type: integer
+          description: Last page number
+          example: 10
+        per_page:
+          type: integer
+          description: Items per page
+          example: 15
+        total:
+          type: integer
+          description: Total items count
+          example: 145
+
+    # Cart schemas
+    Cart:
+      type: object
+      description: |
+        Shopping cart containing items from a specific merchant.
+
+        **Automatic Recalculation Events:**
+        - When cart items are added, updated, or removed
+        - When item quantities or prices change
+        - When tax or discount amounts are modified
+
+        The cart automatically maintains consistency between total_amount, tax_amount, 
+        discount_amount, and final_amount through model events.
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: Unique cart identifier
+        user_id:
+          type: integer
+          example: 2
+          description: ID of the user who owns this cart
+        session_id:
+          type: string
+          nullable: true
+          example: "sess_abc123"
+          description: Session identifier for guest users
+        total_amount:
+          type: number
+          format: decimal
+          multipleOf: 0.01
+          example: 75000.00
+          description: Total amount of all items in the cart
+        tax_amount:
+          type: number
+          format: decimal
+          multipleOf: 0.01
+          example: 0.00
+          description: Tax amount applied to the cart
+        discount_amount:
+          type: number
+          format: decimal
+          multipleOf: 0.01
+          example: 0.00
+          description: Discount amount applied to the cart
+        final_amount:
+          type: number
+          format: decimal
+          multipleOf: 0.01
+          example: 75000.00
+          description: Final amount after tax and discount calculations
+        status:
+          type: string
+          enum: [active, completed, abandoned]
+          example: "active"
+          description: Current status of the cart
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+          description: List of items in the cart
+        merchant:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 2
+              description: Merchant ID
+            name:
+              type: string
+              example: "Warung Pak Joni"
+              description: Merchant name
+            email:
+              type: string
+              example: "penjual@example.com"
+              description: Merchant email
+          description: Information about the merchant for this cart
+        total_items:
+          type: integer
+          description: Total quantity of items in cart
+          example: 3
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:00:00Z"
+          description: When the cart was created
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:00:00Z"
+          description: When the cart was last updated
+      required:
+        - id
+        - user_id
+        - total_amount
+        - final_amount
+        - status
+
+    CartItem:
+      type: object
+      description: |
+        Individual item within a shopping cart with automatic price calculation.
+
+        **Automatic Calculations:**
+        - total_price is automatically calculated as quantity × unit_price
+        - Cart totals are recalculated when cart items change
+        - Price calculations happen on create, update, and delete events
+      properties:
+        id:
+          type: integer
+          example: 1
+        cart_id:
+          type: integer
+          example: 1
+          description: ID of the cart this item belongs to
+        menu_id:
+          type: integer
+          example: 5
+          description: ID of the menu item
+        quantity:
+          type: integer
+          example: 2
+          minimum: 1
+          maximum: 100
+          description: Quantity of the menu item
+        unit_price:
+          type: number
+          format: decimal
+          multipleOf: 0.01
+          example: 25000.00
+          description: Price per unit of the menu item
+        total_price:
+          type: number
+          format: decimal
+          multipleOf: 0.01
+          example: 50000.00
+          description: Total price for this cart item (quantity × unit_price)
+        notes:
+          type: string
+          nullable: true
+          maxLength: 255
+          example: "Extra spicy, no onions"
+          description: Special instructions or notes for this item
+        menu:
+          $ref: "#/components/schemas/Menu"
+          description: The menu item details
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:00:00Z"
+          description: When the cart item was created
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:00:00Z"
+          description: When the cart item was last updated
+      required:
+        - id
+        - cart_id
+        - menu_id
+        - quantity
+        - unit_price
+        - total_price
+
+    # Merchant Payment Method schemas
+    MerchantPaymentMethod:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        merchant_id:
+          type: integer
+          example: 2
+        payment_method_id:
+          type: integer
+          example: 2
+        account_number:
+          type: string
+          nullable: true
+          example: "1234567890"
+        account_name:
+          type: string
+          nullable: true
+          example: "Warung Makan Sederhana"
+        is_active:
+          type: boolean
+          example: true
+        payment_method:
+          $ref: "#/components/schemas/PaymentMethod"
+        merchant:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 2
+            name:
+              type: string
+              example: "Warung Pak Joni"
+            email:
+              type: string
+              example: "penjual@example.com"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-07-23T10:00:00Z"
+
+tags:
+  - name: 🔐 Authentication
+    description: |
+      User authentication and account management endpoints.
+
+      **Features:**
+      - User registration with role selection
+      - Secure login with JWT tokens
+      - Profile management
+      - Password changes
+      - Account deletion
+
+  - name: 🌍 Public APIs
+    description: |
+      Public endpoints that don't require authentication.
+
+      **Available to everyone:**
+      - Browse categories
+      - View payment methods
+      - Check merchant payment options
+
+  - name: 👑 Admin APIs
+    description: |
+      Administrative endpoints for system management.
+
+      **Admin-only features:**
+      - Manage food categories
+      - Configure payment methods
+      - System-wide settings
+
+  - name: 🛒 Seller APIs
+    description: |
+      Seller/merchant endpoints for business operations.
+
+      **Seller features:**
+      - Menu management (CRUD)
+      - Order processing
+      - Payment method setup
+      - Transaction tracking
+
+  - name: 🛒 Customer APIs
+    description: |
+      Customer endpoints for ordering and payments.
+
+      **Customer features:**
+      - Browse and order food
+      - Make payments
+      - Track order status
+      - Chat with sellers
+
+  - name: 🍽️ Menu Management
+    description: |
+      Menu browsing and management endpoints.
+
+      **Features:**
+      - Browse available menus
+      - Search and filter
+      - View detailed information
+      - Stock availability
+
+  - name: 📦 Transaction Management
+    description: |
+      Order and transaction processing endpoints.
+
+      **Transaction flow:**
+      1. Create order
+      2. Make payment
+      3. Seller confirms
+      4. Order preparation
+      5. Completion
+
+  - name: 💳 Payment Management
+    description: |
+      Payment processing and verification endpoints.
+
+      **Payment methods:**
+      - Cash payments
+      - Bank transfers
+      - E-wallet payments
+      - Payment proof upload
+
+  - name: 💬 Chat System
+    description: |
+      Real-time messaging system for buyer-seller communication.
+
+      **Chat features:**
+      - Transaction-based conversations
+      - Text and file messages
+      - Read/unread tracking
+      - Real-time notifications
+      - File attachments (images, documents)

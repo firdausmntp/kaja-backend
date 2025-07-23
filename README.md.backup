@@ -1,0 +1,271 @@
+# 🍽️ Kaja (Kantin Jawara) API Documentation
+
+[![Postman Collection](https://img.shields.io/badge/Postman-Collection-orange.svg)](./KANTIN_JAWARA_COMPLETE.postman_collection.json)
+[![API Documentation](https://img.shields.io/badge/API-Documentation-blue.svg)](./docs/api-documentation.html)
+[![Laravel](https://img.shields.io/badge/Laravel-10.x-red.svg)](https://laravel.com)
+
+Complete API documentation for **Kantin Jawara (Kaja)** system - a comprehensive canteen management solution built with Laravel.
+
+## 🌐 Base URL
+
+```
+https://semenjana.biz.id/kaja/api
+```
+
+## 📋 Quick Start
+
+### 1. Import to Postman
+
+-   Download [`KANTIN_JAWARA_COMPLETE.postman_collection.json`](./KANTIN_JAWARA_COMPLETE.postman_collection.json)
+-   Import to Postman Desktop/Web
+-   Set environment variables
+
+### 2. Testing Accounts
+
+| Role    | Email              | Password   |
+| ------- | ------------------ | ---------- |
+| Admin   | `admin@mail.com`   | `password` |
+| Penjual | `penjual@mail.com` | `password` |
+| Pembeli | `pembeli@mail.com` | `password` |
+
+### 3. Environment Variables
+
+```
+BASE_URL: https://semenjana.biz.id/kaja/api
+ADMIN_TOKEN: [Get from admin login]
+PENJUAL_TOKEN: [Get from penjual login]
+PEMBELI_TOKEN: [Get from pembeli login]
+```
+
+## 🚀 Installation
+
+1. Clone the repository:
+
+    ```bash
+    git clone <repository-url>
+    cd kaja
+    ```
+
+2. Install dependencies:
+
+    ```bash
+    composer install
+    ```
+
+3. Set up environment:
+
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
+
+4. Configure database in `.env`:
+
+    ```
+    DB_CONNECTION=sqlite
+    DB_DATABASE=/path/to/your/database.sqlite
+    ```
+
+5. Run migrations and seeders:
+
+    ```bash
+    php artisan migrate --seed
+    ```
+
+6. Start the development server:
+    ```bash
+    php artisan serve
+    ```
+
+## ✨ Features
+
+-   🔐 User authentication with multiple roles (admin, penjual, pembeli)
+-   📋 Menu management with categories
+-   💰 Transaction processing with status tracking
+-   💳 Payment handling with proof upload
+-   🏷️ Category management
+-   💱 Payment method configuration
+-   � **NEW: Chat System** - Real-time communication between buyers and sellers
+-   �📱 Mobile-friendly API responses
+-   🔒 Secure file uploads
+-   📊 Transaction reporting
+
+## 📱 Complete API Documentation
+
+### Available Documentation Formats:
+
+1. **[📄 Interactive HTML Documentation](./docs/api-documentation.html)**
+
+    - Beautiful web-based documentation
+    - Interactive examples
+    - Copy-paste ready code snippets
+
+2. **[📋 Markdown Documentation](./docs/API_DOCUMENTATION_v2.md)**
+
+    - Complete API reference
+    - All endpoints with examples
+    - Response formats and error codes
+
+3. **[📮 Postman Collection](./KANTIN_JAWARA_COMPLETE.postman_collection.json)**
+
+    - Ready-to-import collection
+    - Pre-configured requests
+    - Environment variables setup
+
+4. **[💬 Chat System API](./docs/CHAT_SYSTEM_API.md)**
+    - Complete chat system documentation
+    - Real-time messaging guide
+    - WebSocket integration examples
+    - Pre-configured requests
+    - Environment variables setup
+
+## 🔐 Quick API Reference
+
+### Authentication
+
+```http
+POST /api/register    # Register new user
+POST /api/login       # Login user
+GET  /api/profile     # Get user profile
+POST /api/logout      # Logout user
+```
+
+### Public Endpoints
+
+```http
+GET /api/categories                              # Get all categories
+GET /api/payment-methods                         # Get payment methods
+GET /api/merchants/{id}/payment-methods          # Get merchant payment methods
+```
+
+### Admin Endpoints (🔑 Admin Token Required)
+
+```http
+POST   /api/categories              # Create category
+PUT    /api/categories/{id}         # Update category
+DELETE /api/categories/{id}         # Delete category
+POST   /api/payment-methods         # Create payment method
+PUT    /api/payment-methods/{id}    # Update payment method
+DELETE /api/payment-methods/{id}    # Delete payment method
+```
+
+### Penjual Endpoints (🔑 Penjual Token Required)
+
+```http
+POST   /api/menus                                    # Create menu
+PUT    /api/menus/{id}                              # Update menu
+DELETE /api/menus/{id}                              # Delete menu
+GET    /api/penjual/transactions                    # Get all transactions
+PUT    /api/penjual/transactions/{id}/status        # Update transaction status
+POST   /api/merchant-payment-methods                # Setup payment method
+```
+
+### Pembeli Endpoints (🔑 Pembeli Token Required)
+
+```http
+GET    /api/menus                      # Browse menus
+POST   /api/transactions               # Create order
+GET    /api/pembeli/transactions       # Get my orders
+POST   /api/payments                   # Process payment
+POST   /api/payments/proof             # Upload payment proof
+```
+
+### 💬 Chat System Endpoints (🔑 Authentication Required)
+
+```http
+GET    /api/chats                                    # Get chat list
+GET    /api/chats/unread-count                       # Get unread count
+GET    /api/transactions/{id}/chats                  # Get chat messages
+POST   /api/transactions/{id}/chats                  # Send message
+DELETE /api/chats/{id}                               # Delete message
+```
+
+POST /api/payments # Make payment
+POST /api/payments/proof # Upload payment proof
+
+````
+
+## 🧪 Testing with Postman
+
+1. **Import Collection**: Download and import the Postman collection
+2. **Set Environment**: Configure the environment variables
+3. **Login**: Use testing accounts to get authentication tokens
+4. **Test Endpoints**: Start with public endpoints, then authenticated ones
+
+### Example Login Flow:
+
+```javascript
+// 1. Login as Pembeli
+POST https://semenjana.biz.id/kaja/api/login
+{
+  "email": "pembeli@mail.com",
+  "password": "password"
+}
+
+// 2. Copy token from response
+// 3. Set PEMBELI_TOKEN environment variable
+// 4. Start testing pembeli endpoints
+````
+
+## 🌐 Hosting Documentation Online
+
+### Option 1: GitHub Pages (Free)
+
+1. Push your repository to GitHub
+2. Go to Settings > Pages
+3. Select source branch
+4. Your documentation will be available at: `https://username.github.io/repository-name/docs/api-documentation.html`
+
+### Option 2: Postman Public Documentation
+
+1. Import collection to Postman
+2. Click "View Documentation"
+3. Click "Publish"
+4. Get public URL to share
+
+### Option 3: Host HTML File
+
+-   Upload `docs/api-documentation.html` to any web server
+-   Access via your domain
+
+## 📊 Status Codes & Error Handling
+
+| Status Code | Description               |
+| ----------- | ------------------------- |
+| 200         | Success                   |
+| 401         | Unauthenticated           |
+| 403         | Unauthorized (wrong role) |
+| 404         | Resource not found        |
+| 422         | Validation errors         |
+| 500         | Server error              |
+
+## 🔄 Transaction Status Flow
+
+```
+pending → paid → confirmed → ready → completed
+                     ↓
+                 cancelled (anytime)
+```
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+**🍽️ Kaja (Kantin Jawara)**  
+_Complete canteen management system with comprehensive API_
+
+Built with ❤️ using Laravel Framework
+
+## Code of Conduct
+
+In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+
+## Security Vulnerabilities
+
+If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+
+## License
+
+The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
