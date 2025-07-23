@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Existing pembeli routes
         Route::post('/transactions', [TransactionController::class, 'store']);
         Route::get('/transactions/{id}', [TransactionController::class, 'show']);
+        Route::put('/transactions/{id}', [TransactionController::class, 'update']);
         Route::delete('/transactions/{id}', [TransactionController::class, 'destroy']);
         Route::get('/pembeli/transactions', [PembeliController::class, 'myTransactions']);
         Route::post('/payments', [PaymentController::class, 'store']);

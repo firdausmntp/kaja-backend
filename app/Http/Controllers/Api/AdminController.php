@@ -89,7 +89,7 @@ class AdminController extends Controller
                 'customer:id,name,email',
                 'merchant:id,name,email',
                 'items.menu:id,name,price',
-                'payment:id,transaction_id,amount,method,status'
+                'payment:id,transaction_id,amount,method'
             ]);
 
             // Filter by status

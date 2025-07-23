@@ -92,14 +92,33 @@ class MerchantPaymentMethodController extends Controller
     // Endpoint untuk pembeli melihat payment methods yang tersedia dari penjual
     public function getAvailableForMerchant($merchantId)
     {
-        $availablePaymentMethods = MerchantPaymentMethod::with('paymentMethod')
-            ->where('user_id', $merchantId)
-            ->where('is_active', true)
-            ->whereHas('paymentMethod', function ($query) {
-                $query->where('is_active', true);
-            })
-            ->get();
+        try {
+            // Validate merchantId
+            if (!$merchantId || !is_numeric($merchantId)) {
+                return response()->json([
+                    'message' => 'Invalid merchant ID',
+                    'data' => []
+                ], 400);
+            }
 
-        return response()->json($availablePaymentMethods);
+            $availablePaymentMethods = MerchantPaymentMethod::with('paymentMethod')
+                ->where('user_id', $merchantId)
+                ->where('is_active', true)
+                ->whereHas('paymentMethod', function ($query) {
+                    $query->where('is_active', true);
+                })
+                ->get();
+
+            return response()->json([
+                'message' => 'Available payment methods retrieved successfully',
+                'data' => $availablePaymentMethods,
+                'merchant_id' => $merchantId
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error retrieving payment methods',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

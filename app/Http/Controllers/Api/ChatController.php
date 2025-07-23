@@ -20,7 +20,24 @@ class ChatController extends Controller
         // Validate user access to this transaction
         $user = $request->user();
 
-        if ($transaction->user_id !== $user->id && $transaction->cashier_id !== $user->id) {
+        // Check if user is the customer (pembeli)
+        $isCustomer = $transaction->user_id === $user->id;
+
+        // Check if user is the merchant (penjual)
+        $isMerchant = false;
+        if ($transaction->cashier_id === $user->id) {
+            $isMerchant = true;
+        } else {
+            // If cashier_id is null, check if user owns any menu in transaction items
+            $merchantCheck = $transaction->items()
+                ->whereHas('menu', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })
+                ->exists();
+            $isMerchant = $merchantCheck;
+        }
+
+        if (!$isCustomer && !$isMerchant) {
             return response()->json([
                 'message' => 'Anda tidak memiliki akses ke chat ini.'
             ], 403);
@@ -62,8 +79,24 @@ class ChatController extends Controller
     {
         $user = $request->user();
 
-        // Validate user access
-        if ($transaction->user_id !== $user->id && $transaction->cashier_id !== $user->id) {
+        // Check if user is the customer (pembeli)
+        $isCustomer = $transaction->user_id === $user->id;
+
+        // Check if user is the merchant (penjual)
+        $isMerchant = false;
+        if ($transaction->cashier_id === $user->id) {
+            $isMerchant = true;
+        } else {
+            // If cashier_id is null, check if user owns any menu in transaction items
+            $merchantCheck = $transaction->items()
+                ->whereHas('menu', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })
+                ->exists();
+            $isMerchant = $merchantCheck;
+        }
+
+        if (!$isCustomer && !$isMerchant) {
             return response()->json([
                 'message' => 'Anda tidak memiliki akses ke chat ini.'
             ], 403);

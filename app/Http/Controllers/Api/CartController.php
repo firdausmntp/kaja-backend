@@ -9,6 +9,7 @@ use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CartController extends Controller
 {
@@ -173,7 +174,7 @@ class CartController extends Controller
         $cartItem->delete();
 
         // Delete cart if empty
-        if ($cart->isEmpty()) {
+        if ($cart->cartItems()->count() == 0) {
             $cart->delete();
             return response()->json([
                 'message' => 'Item removed and cart deleted (was empty)',
@@ -229,14 +230,14 @@ class CartController extends Controller
             ->active()
             ->first();
 
-        if (!$cart || $cart->isEmpty()) {
+        if (!$cart || $cart->cartItems->count() == 0) {
             return response()->json([
                 'message' => 'Cart is empty or not found'
             ], 400);
         }
 
         // Check if all items are still available
-        foreach ($cart->items as $item) {
+        foreach ($cart->cartItems as $item) {
             if (!$item->menu->is_available) {
                 return response()->json([
                     'message' => "Menu '{$item->menu->name}' is no longer available"
@@ -246,39 +247,56 @@ class CartController extends Controller
 
         DB::beginTransaction();
         try {
+            // Get actual merchant ID from cart items
+            $actualMerchantId = $cart->cartItems->first()->menu->user_id;
+
+            // Validate that all items belong to the same merchant
+            foreach ($cart->cartItems as $item) {
+                if ($item->menu->user_id !== $actualMerchantId) {
+                    return response()->json([
+                        'message' => 'Cart contains items from different merchants'
+                    ], 400);
+                }
+            }
+
             // Create transaction (you might want to move this to TransactionController)
             $transaction = \App\Models\Transaction::create([
                 'user_id' => $user->id,
-                'merchant_id' => $merchantId,
-                'total_amount' => $cart->total_amount,
-                'status' => 'pending',
-                'payment_method_id' => $request->payment_method_id,
+                'cashier_id' => $actualMerchantId, // menggunakan merchant ID yang sebenarnya
+                'total_price' => $cart->total_amount,
+                'status' => 'unpaid',
+                'payment_method' => null, // akan diset saat payment dibuat
                 'notes' => $request->notes
             ]);
 
             // Create transaction items from cart items
-            foreach ($cart->items as $cartItem) {
+            foreach ($cart->cartItems as $cartItem) {
                 \App\Models\TransactionItem::create([
                     'transaction_id' => $transaction->id,
                     'menu_id' => $cartItem->menu_id,
                     'quantity' => $cartItem->quantity,
-                    'unit_price' => $cartItem->unit_price,
-                    'total_price' => $cartItem->total_price,
-                    'notes' => $cartItem->notes
+                    'price' => $cartItem->unit_price
                 ]);
             }
 
-            // Mark cart as converted
-            $cart->update(['status' => 'converted']);
+            // Delete cart and cart items after successful checkout
+            Log::info('Deleting cart items for cart ID: ' . $cart->id);
+            $deletedItems = $cart->cartItems()->delete();
+            Log::info('Deleted ' . $deletedItems . ' cart items');
+
+            Log::info('Deleting cart ID: ' . $cart->id);
+            $cart->delete();
+            Log::info('Cart deleted successfully');
 
             DB::commit();
 
             return response()->json([
                 'message' => 'Checkout successful',
-                'transaction' => $transaction->load(['transactionItems.menu', 'paymentMethod'])
+                'transaction' => $transaction->load(['items.menu'])
             ]);
         } catch (\Exception $e) {
             DB::rollback();
+            Log::error('Checkout failed: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Checkout failed',
                 'error' => $e->getMessage()

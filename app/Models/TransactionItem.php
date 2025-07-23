@@ -9,6 +9,8 @@ class TransactionItem extends Model
 {
     use HasFactory;
 
+    public $timestamps = false; // Disable timestamps
+
     protected $fillable = [
         'transaction_id',
         'menu_id',

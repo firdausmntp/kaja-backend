@@ -35,7 +35,7 @@ class PembeliController extends Controller
             'items.menu:id,name,price,image_url',
             'items.menu.category:id,name',
             'merchant:id,name,email',
-            'payment:id,transaction_id,amount,method,status',
+            'payment:id,transaction_id,amount,method',
             'chats' => function ($query) use ($user) {
                 $query->where('sender_id', '!=', $user->id)
                     ->where('is_read', false);
