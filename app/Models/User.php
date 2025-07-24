@@ -16,6 +16,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role', // tambahkan ini
+        'is_active',
     ];
 
     protected $hidden = [
@@ -27,6 +28,7 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed', // tetap pakai hashed
+            'is_active' => 'boolean',
         ];
     }
 
@@ -38,6 +40,12 @@ class User extends Authenticatable
     public function activePaymentMethods()
     {
         return $this->merchantPaymentMethods()->where('is_active', true)->with('paymentMethod');
+    }
+
+    // Menu relationships
+    public function menus()
+    {
+        return $this->hasMany(Menu::class);
     }
 
     // Cart relationships

@@ -1,0 +1,310 @@
+{
+    "info": {
+        "name": "Kaja API - Merchants Endpoints",
+        "description": "Updated collection with proper headers for merchant endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "BASE_URL",
+            "value": "https://semenjana.biz.id/kaja/api",
+            "type": "string"
+        },
+        {
+            "key": "LOCAL_URL",
+            "value": "http://localhost:8000/api",
+            "type": "string"
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Auto add headers to all requests",
+                    "pm.request.headers.add({",
+                    "    key: 'Content-Type',",
+                    "    value: 'application/json'",
+                    "});",
+                    "",
+                    "pm.request.headers.add({",
+                    "    key: 'Accept',",
+                    "    value: 'application/json'",
+                    "});"
+                ]
+            }
+        }
+    ],
+    "item": [
+        {
+            "name": "🏪 Merchants",
+            "item": [
+                {
+                    "name": "Get All Merchants",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/merchants",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["merchants"]
+                        },
+                        "description": "Get list of all merchants/sellers with their basic information"
+                    },
+                    "response": [
+                        {
+                            "name": "Success Response",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{BASE_URL}}/merchants",
+                                    "host": ["{{BASE_URL}}"],
+                                    "path": ["merchants"]
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n  \"message\": \"Merchants retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": 2,\n      \"name\": \"Warung Makan Sederhana\",\n      \"email\": \"penjual@mail.com\",\n      \"total_menus\": 5,\n      \"payment_methods_count\": 3,\n      \"joined_at\": \"2025-07-24\"\n    },\n    {\n      \"id\": 3,\n      \"name\": \"Kantin Bu Sari\",\n      \"email\": \"sari@mail.com\",\n      \"total_menus\": 8,\n      \"payment_methods_count\": 2,\n      \"joined_at\": \"2025-07-20\"\n    }\n  ],\n  \"total\": 2\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Merchant Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/merchants/2",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["merchants", "2"]
+                        },
+                        "description": "Get detailed information about a specific merchant including their menus and payment methods"
+                    },
+                    "response": [
+                        {
+                            "name": "Merchant Details Success",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{BASE_URL}}/merchants/2",
+                                    "host": ["{{BASE_URL}}"],
+                                    "path": ["merchants", "2"]
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n  \"message\": \"Merchant details retrieved successfully\",\n  \"data\": {\n    \"id\": 2,\n    \"name\": \"Warung Makan Sederhana\",\n    \"email\": \"penjual@mail.com\",\n    \"joined_at\": \"2025-07-24 10:30:15\",\n    \"total_menus\": 5,\n    \"menus\": [\n      {\n        \"id\": 1,\n        \"name\": \"Nasi Goreng Special\",\n        \"description\": \"Nasi goreng dengan telur dan ayam\",\n        \"price\": 25000,\n        \"stock\": 50,\n        \"image_url\": \"https://semenjana.biz.id/kaja/storage/menus/image.jpg\",\n        \"category\": {\n          \"id\": 2,\n          \"name\": \"Makanan Berat\"\n        }\n      }\n    ],\n    \"payment_methods\": [\n      {\n        \"id\": 1,\n        \"name\": \"Transfer Bank\"\n      },\n      {\n        \"id\": 2,\n        \"name\": \"E-Wallet\"\n      }\n    ]\n  }\n}"
+                        },
+                        {
+                            "name": "Merchant Not Found",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{BASE_URL}}/merchants/999",
+                                    "host": ["{{BASE_URL}}"],
+                                    "path": ["merchants", "999"]
+                                }
+                            },
+                            "status": "Not Found",
+                            "code": 404,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n  \"message\": \"Merchant tidak ditemukan\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Merchant Menus",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/merchants/2/menus",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["merchants", "2", "menus"]
+                        },
+                        "description": "Get all menu items from a specific merchant"
+                    },
+                    "response": [
+                        {
+                            "name": "Merchant Menus Success",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{BASE_URL}}/merchants/2/menus",
+                                    "host": ["{{BASE_URL}}"],
+                                    "path": ["merchants", "2", "menus"]
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n  \"message\": \"Merchant menus retrieved successfully\",\n  \"merchant\": {\n    \"id\": 2,\n    \"name\": \"Warung Makan Sederhana\"\n  },\n  \"data\": [\n    {\n      \"id\": 1,\n      \"name\": \"Nasi Goreng Special\",\n      \"description\": \"Nasi goreng dengan telur dan ayam\",\n      \"price\": 25000,\n      \"stock\": 50,\n      \"image_url\": \"https://semenjana.biz.id/kaja/storage/menus/image.jpg\",\n      \"category\": {\n        \"id\": 2,\n        \"name\": \"Makanan Berat\"\n      }\n    },\n    {\n      \"id\": 2,\n      \"name\": \"Mie Ayam Bakso\",\n      \"description\": \"Mie ayam dengan bakso sapi\",\n      \"price\": 20000,\n      \"stock\": 30,\n      \"image_url\": \"https://semenjana.biz.id/kaja/storage/menus/mie-ayam.jpg\",\n      \"category\": {\n        \"id\": 2,\n        \"name\": \"Makanan Berat\"\n      }\n    }\n  ],\n  \"total\": 10\n}"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "🧪 Test Headers",
+            "item": [
+                {
+                    "name": "Test Headers - Categories (Public)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/categories",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["categories"]
+                        },
+                        "description": "Test headers with public endpoint"
+                    }
+                },
+                {
+                    "name": "Test Headers - Profile (Protected)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{TOKEN}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/profile",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["profile"]
+                        },
+                        "description": "Test headers with protected endpoint"
+                    }
+                }
+            ]
+        }
+    ]
+}

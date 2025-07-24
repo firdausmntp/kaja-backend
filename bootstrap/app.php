@@ -15,6 +15,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
+
+        // Tambahkan CORS middleware untuk API routes
+        $middleware->appendToGroup('api', [
+            \App\Http\Middleware\CorsMiddleware::class,
+        ]);
+
+        // Atau kalau mau global (untuk semua routes)
+        // $middleware->append(\App\Http\Middleware\CorsMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -17,6 +17,8 @@ class Payment extends Model
         'method',
         'paid_at',
         'proof',
+        'status',
+        'notes',
     ];
 
     protected $dates = [

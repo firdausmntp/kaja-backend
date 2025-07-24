@@ -13,9 +13,21 @@ info:
     - **Menu Management** - Complete CRUD operations for food items and categories
     - **Smart Cart System** - Automatic price calculations, merchant-specific carts, and real-time updates
     - **Transaction Processing** - Order creation, status tracking, and management
-    - **Payment Integration** - Multiple payment methods (Cash, Bank Transfer, E-Wallet)
+    - **Payment Integration** - Multiple payment methods (Cash, Bank Transfer, E-Wallet) with flexible proof upload
+    - **Payment Proof Upload** - Support both file upload and URL download for payment proof
+    - **Manual Payment Marking** - Mark transactions as paid without proof for cash/manual payments
     - **Real-time Chat** - Transaction-based messaging between buyers and sellers
     - **File Upload Support** - Images and documents for chat and payment proof
+
+    ## 💰 Payment Features
+
+    The payment system supports multiple workflows:
+
+    - **Instant Payment** - Create payment with proof in one step
+    - **Deferred Proof** - Mark as paid first, upload proof later
+    - **URL Download** - Provide image URL to download and save payment proof
+    - **File Upload** - Traditional file upload for payment proof
+    - **Manual Verification** - Cash payments and manual transfer marking
 
     ## 🛒 Cart Management
 
@@ -36,7 +48,33 @@ info:
     - Updated decimal precision specifications for price fields
     - Enhanced business rules documentation for cart management
 
-    ## 🔐 Authentication
+    ## � Changelog
+
+    ### v2.3.0 (2025-07-24)
+    - ✅ **NEW**: Admin user management system
+    - ✅ **NEW**: Update user details (`PUT /admin/users/{id}`)
+    - ✅ **NEW**: Change user passwords (`PUT /admin/users/{id}/password`)
+    - ✅ **NEW**: Ban/unban users (`PUT /admin/users/{id}/status`)
+    - ✅ **NEW**: Delete user accounts (`DELETE /admin/users/{id}`)
+    - ✅ **ENHANCED**: User schema with `is_active` field for ban functionality
+    - 🔒 **SECURITY**: Admin users are not shown in user listings for security
+    - 🔒 **SECURITY**: Admin accounts cannot be modified by other admins
+
+    ### v2.2.0 (2025-07-24)
+    - ✅ **NEW**: Mark transaction as paid without proof (`POST /pembeli/transactions/{id}/mark-as-paid`)
+    - ✅ **ENHANCED**: Payment proof upload now supports URL download
+    - ✅ **ENHANCED**: Both `/payments` and `/payments/proof` endpoints support URL-based proof upload
+    - ✅ **ENHANCED**: Improved payment status tracking with notes and verification states
+    - 🔧 **FIXED**: Transaction creation now requires payment_method selection
+    - 🔧 **FIXED**: Consistent cashier_id population in transactions
+
+    ### v2.1.0 (Previous)
+    - Merchant API endpoints
+    - Cart management system
+    - Transaction-based chat system
+    - Enhanced authentication and authorization
+
+    ## �🔐 Authentication
 
     Most endpoints require Bearer token authentication. Get your token by logging in via the `/login` endpoint.
 
@@ -63,7 +101,7 @@ info:
 
     Production: `https://semenjana.biz.id/kaja/api`
 
-  version: 2.1.0
+  version: 2.3.0
   contact:
     name: Kaja API Support
     email: support@semenjana.biz.id
@@ -1161,16 +1199,24 @@ paths:
     post:
       tags:
         - 💳 Payment Management
-      summary: Create payment
+      summary: Create payment (with optional proof)
       description: |
-        Create a payment for a transaction.
+        Create a payment for a transaction with optional payment proof.
 
         **Payment Methods:**
-        - `Cash` - Pay in person
-        - `Bank Transfer` - Transfer to bank account (requires proof)
-        - `E-Wallet` - Digital wallet payment (requires proof)
+        - `Cash` - Pay in person (no proof required)
+        - `Bank Transfer` - Transfer to bank account (proof recommended)
+        - `E-Wallet` - Digital wallet payment (proof recommended)
 
-        **Note:** For non-cash payments, upload payment proof using the file upload.
+        **Three ways to create payment:**
+        1. **JSON only** - Basic payment without proof
+        2. **Multipart with file** - Payment with uploaded proof file
+        3. **JSON with URL** - Payment with proof downloaded from URL
+
+        **Proof Requirements:**
+        - File formats: JPG, PNG, GIF, WebP
+        - Max size: 2MB
+        - URL must be publicly accessible
       operationId: createPayment
       security:
         - bearerAuth: []
@@ -1179,24 +1225,85 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreatePaymentRequest"
+              type: object
+              required:
+                - transaction_id
+                - amount
+                - method
+              properties:
+                transaction_id:
+                  type: integer
+                  description: Transaction ID
+                  example: 1
+                amount:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                  description: Payment amount
+                  example: 50000
+                method:
+                  type: string
+                  description: Payment method name (must exist in payment_methods table)
+                  example: "Bank Transfer"
+                proof_url:
+                  type: string
+                  format: uri
+                  description: Optional URL of payment proof image (will be downloaded)
+                  example: "https://example.com/bukti_transfer.jpg"
             examples:
               cash_payment:
-                summary: Cash payment
+                summary: Cash payment (no proof)
                 value:
                   transaction_id: 1
                   amount: 50000
-                  method: Cash
+                  method: "Cash"
+              transfer_with_url:
+                summary: Bank transfer with URL proof
+                value:
+                  transaction_id: 1
+                  amount: 50000
+                  method: "Bank Transfer"
+                  proof_url: "https://drive.google.com/uc?id=FILE_ID"
+              ewallet_with_url:
+                summary: E-wallet with image URL
+                value:
+                  transaction_id: 1
+                  amount: 50000
+                  method: "E-Wallet"
+                  proof_url: "https://i.imgur.com/payment_proof.jpg"
           multipart/form-data:
             schema:
-              $ref: "#/components/schemas/CreatePaymentWithProofRequest"
+              type: object
+              required:
+                - transaction_id
+                - amount
+                - method
+              properties:
+                transaction_id:
+                  type: integer
+                  description: Transaction ID
+                  example: 1
+                amount:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                  description: Payment amount
+                  example: 50000
+                method:
+                  type: string
+                  description: Payment method name
+                  example: "Bank Transfer"
+                proof:
+                  type: string
+                  format: binary
+                  description: Payment proof image file (max 2MB)
             examples:
-              transfer_payment:
-                summary: Bank transfer with proof
+              transfer_with_file:
+                summary: Bank transfer with file proof
                 value:
                   transaction_id: 1
                   amount: 50000
-                  method: Bank Transfer
+                  method: "Bank Transfer"
                   proof: "[binary file data]"
       responses:
         "201":
@@ -1206,15 +1313,131 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
-                    $ref: "#/components/schemas/Payment"
                   message:
                     type: string
-                    example: "Payment created successfully"
+                    example: "Pembayaran berhasil"
+                  payment:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      transaction_id:
+                        type: integer
+                        example: 1
+                      amount:
+                        type: string
+                        example: "50000.00"
+                      method:
+                        type: string
+                        example: "Bank Transfer"
+                      proof:
+                        type: string
+                        nullable: true
+                        example: "http://localhost/storage/proofs/proof_123.jpg"
+                      paid_at:
+                        type: string
+                        format: date-time
+                        example: "2025-07-24T10:30:00.000000Z"
+                      payment_method:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 2
+                          name:
+                            type: string
+                            example: "Bank Transfer"
+                          description:
+                            type: string
+                            example: "Transfer bank"
+              examples:
+                cash_success:
+                  summary: Cash Payment Success
+                  value:
+                    message: "Pembayaran berhasil"
+                    payment:
+                      id: 1
+                      transaction_id: 1
+                      amount: "50000.00"
+                      method: "Cash"
+                      proof: null
+                      paid_at: "2025-07-24T10:30:00.000000Z"
+                      payment_method:
+                        id: 1
+                        name: "Cash"
+                        description: "Pembayaran tunai"
+                proof_success:
+                  summary: Payment with Proof Success
+                  value:
+                    message: "Pembayaran berhasil"
+                    payment:
+                      id: 2
+                      transaction_id: 1
+                      amount: "50000.00"
+                      method: "Bank Transfer"
+                      proof: "http://localhost/storage/proofs/proof_123456.jpg"
+                      paid_at: "2025-07-24T10:30:00.000000Z"
+                      payment_method:
+                        id: 2
+                        name: "Bank Transfer"
+                        description: "Transfer bank"
+        "400":
+          description: Payment method not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                method_unavailable:
+                  summary: Payment Method Not Available
+                  value:
+                    message: "Metode pembayaran tidak tersedia"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "422":
-          $ref: "#/components/responses/ValidationError"
+          description: Validation error or URL download failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Gagal mengunduh bukti pembayaran dari URL"
+                  errors:
+                    type: object
+                    properties:
+                      proof:
+                        type: array
+                        items:
+                          type: string
+                        example: ["The proof must be an image."]
+                      proof_url:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          ["URL tidak valid atau file tidak dapat diunduh"]
+              examples:
+                validation_error:
+                  summary: Validation Error
+                  value:
+                    message: "The given data was invalid."
+                    errors:
+                      method: ["The selected method is invalid."]
+                      amount:
+                        [
+                          "The amount must be a number.",
+                          "The amount must be at least 0.",
+                        ]
+                url_download_failed:
+                  summary: URL Download Failed
+                  value:
+                    message: "Gagal mengunduh bukti pembayaran dari URL"
+                    errors:
+                      proof_url:
+                        ["URL tidak valid atau file tidak dapat diunduh"]
 
   /payment-methods:
     get:
@@ -1260,7 +1483,10 @@ paths:
       tags:
         - 👑 Admin APIs
       summary: Get all users (Admin only)
-      description: Retrieve a list of all users in the system with filtering and pagination
+      description: |
+        Retrieve a list of all users in the system with filtering and pagination.
+
+        **Note:** Admin users are not included in the results for security reasons.
       operationId: adminListUsers
       security:
         - bearerAuth: []
@@ -1276,7 +1502,7 @@ paths:
           description: Filter by user role
           schema:
             type: string
-            enum: [admin, penjual, pembeli]
+            enum: [penjual, pembeli]
         - name: search
           in: query
           description: Search by name or email
@@ -1469,6 +1695,7 @@ paths:
         "500":
           description: Server error
 
+  # === ADMIN USER MANAGEMENT ENDPOINTS ===
   /admin/users/{id}:
     get:
       tags:
@@ -1503,6 +1730,293 @@ paths:
           $ref: "#/components/responses/ForbiddenError"
         "404":
           $ref: "#/components/responses/NotFoundError"
+        "500":
+          description: Server error
+
+    put:
+      tags:
+        - 👑 Admin APIs
+      summary: Update user details (Admin only)
+      description: |
+        Update user information. Admin users cannot be updated.
+
+        **Restrictions:**
+        - Cannot update admin users
+        - Role can only be changed to 'penjual' or 'pembeli'
+      operationId: adminUpdateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Updated Name"
+                email:
+                  type: string
+                  format: email
+                  example: "updated@example.com"
+                role:
+                  type: string
+                  enum: [penjual, pembeli]
+                  example: "penjual"
+            examples:
+              update_name:
+                summary: Update user name
+                value:
+                  name: "New Name"
+              update_role:
+                summary: Change user role
+                value:
+                  role: "penjual"
+              complete_update:
+                summary: Update all fields
+                value:
+                  name: "Updated Name"
+                  email: "newemail@example.com"
+                  role: "pembeli"
+      responses:
+        "200":
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "User updated successfully"
+                  data:
+                    $ref: "#/components/schemas/User"
+        "403":
+          description: Cannot update admin users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Cannot update admin users"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          description: Server error
+
+    delete:
+      tags:
+        - 👑 Admin APIs
+      summary: Delete user account (Admin only)
+      description: |
+        Delete a user account. 
+
+        **Restrictions:**
+        - Cannot delete admin users
+        - Cannot delete users with active transactions
+      operationId: adminDeleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            example: 123
+      responses:
+        "200":
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "User deleted successfully"
+        "400":
+          description: Cannot delete user with active transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Cannot delete user with active transactions"
+        "403":
+          description: Cannot delete admin users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Cannot delete admin users"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          description: Server error
+
+  /admin/users/{id}/password:
+    put:
+      tags:
+        - 👑 Admin APIs
+      summary: Change user password (Admin only)
+      description: |
+        Change password for any user account.
+
+        **Restrictions:**
+        - Cannot change admin user passwords
+      operationId: adminChangeUserPassword
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+                - password_confirmation
+              properties:
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "newpassword123"
+                password_confirmation:
+                  type: string
+                  format: password
+                  example: "newpassword123"
+            examples:
+              change_password:
+                summary: Change user password
+                value:
+                  password: "newpassword123"
+                  password_confirmation: "newpassword123"
+      responses:
+        "200":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "User password changed successfully"
+        "403":
+          description: Cannot update admin user passwords
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Cannot update admin user passwords"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          description: Server error
+
+  /admin/users/{id}/status:
+    put:
+      tags:
+        - 👑 Admin APIs
+      summary: Ban/Unban user (Admin only)
+      description: |
+        Toggle user active status (ban/unban functionality).
+
+        **Restrictions:**
+        - Cannot ban/unban admin users
+      operationId: adminToggleUserStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - is_active
+              properties:
+                is_active:
+                  type: boolean
+                  example: false
+            examples:
+              ban_user:
+                summary: Ban user
+                value:
+                  is_active: false
+              unban_user:
+                summary: Unban user
+                value:
+                  is_active: true
+      responses:
+        "200":
+          description: User status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "User banned successfully"
+                  data:
+                    $ref: "#/components/schemas/User"
+        "403":
+          description: Cannot ban/unban admin users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Cannot ban/unban admin users"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
         "500":
           description: Server error
 
@@ -2200,6 +2714,125 @@ paths:
         "404":
           $ref: "#/components/responses/NotFoundError"
 
+  # === MERCHANTS ENDPOINTS ===
+  /merchants:
+    get:
+      tags:
+        - 🌍 Public APIs
+      summary: Get all merchants
+      description: Get list of all merchants/sellers with their basic information
+      operationId: getAllMerchants
+      security: []
+      responses:
+        "200":
+          description: Merchants retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Merchants retrieved successfully"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MerchantSummary"
+                  total:
+                    type: integer
+                    example: 5
+
+  /merchants/{id}:
+    get:
+      tags:
+        - 🌍 Public APIs
+      summary: Get merchant details
+      description: Get detailed information about a specific merchant including their menus and payment methods
+      operationId: getMerchantDetails
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 2
+          description: ID of the merchant
+      responses:
+        "200":
+          description: Merchant details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Merchant details retrieved successfully"
+                  data:
+                    $ref: "#/components/schemas/MerchantDetails"
+        "404":
+          description: Merchant not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                merchant_not_found:
+                  summary: Merchant not found
+                  value:
+                    message: "Merchant tidak ditemukan"
+
+  /merchants/{id}/menus:
+    get:
+      tags:
+        - 🌍 Public APIs
+      summary: Get merchant menus
+      description: Get all menu items from a specific merchant
+      operationId: getMerchantMenus
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 2
+          description: ID of the merchant
+      responses:
+        "200":
+          description: Merchant menus retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Merchant menus retrieved successfully"
+                  merchant:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 2
+                      name:
+                        type: string
+                        example: "Warung Makan Sederhana"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Menu"
+                  total:
+                    type: integer
+                    example: 10
+        "404":
+          description: Merchant not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   # === SELLER SPECIFIC ENDPOINTS ===
   /penjual/menus:
     get:
@@ -2381,12 +3014,115 @@ paths:
         "403":
           $ref: "#/components/responses/ForbiddenError"
 
+  /pembeli/transactions/{id}/mark-as-paid:
+    post:
+      tags:
+        - 🛒 Customer APIs
+      summary: Mark transaction as paid (without proof)
+      description: |
+        Mark a transaction as paid without uploading payment proof. 
+        Useful for:
+        - Cash payments
+        - Manual bank transfers
+        - E-wallet payments
+        - When proof will be uploaded later
+      operationId: markTransactionAsPaid
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Transaction ID
+          example: 123
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_note:
+                  type: string
+                  maxLength: 255
+                  description: Optional note about the payment method used
+                  example: "Sudah bayar cash langsung ke warung"
+            examples:
+              cash_payment:
+                summary: Cash Payment
+                value:
+                  payment_note: "Bayar tunai langsung ke kasir"
+              bank_transfer:
+                summary: Bank Transfer
+                value:
+                  payment_note: "Transfer BCA ke 1234567890 a.n Warung Makan"
+              ewallet:
+                summary: E-Wallet Payment
+                value:
+                  payment_note: "OVO ke 08123456789 - Warung Makan Sederhana"
+              no_note:
+                summary: No Note
+                value: {}
+      responses:
+        "200":
+          description: Transaction marked as paid successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Transaksi berhasil ditandai sebagai sudah dibayar"
+                  data:
+                    $ref: "#/components/schemas/TransactionDetails"
+        "400":
+          description: Transaction already paid or invalid status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                already_paid:
+                  summary: Already Paid
+                  value:
+                    message: "Transaction sudah ditandai sebagai paid"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Transaction not found or not owned by user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                not_found:
+                  summary: Transaction Not Found
+                  value:
+                    message: "Transaction not found or not owned by you"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
   /payments/proof:
     post:
       tags:
         - 🛒 Customer APIs
-      summary: Upload payment proof
-      description: Upload payment proof for a transaction
+      summary: Upload payment proof (file or URL)
+      description: |
+        Upload payment proof for a transaction. Supports both file upload and URL download.
+
+        **Two methods available:**
+        1. **File Upload**: Use multipart/form-data with `proof` field
+        2. **URL Download**: Use application/json with `proof_url` field
+
+        **Supported formats:** JPG, PNG, GIF, WebP (max 2MB)
+
+        **URL Requirements:**
+        - Must be publicly accessible
+        - Content-Type must be image/*
+        - File size max 2MB
+        - 30-second timeout for download
       operationId: uploadPaymentProof
       requestBody:
         required: true
@@ -2407,10 +3143,42 @@ paths:
                   description: Payment proof image (max 2MB)
             examples:
               upload_proof:
-                summary: Upload payment proof
+                summary: Upload payment proof file
                 value:
                   transaction_id: 123
                   proof: "[binary file data]"
+          application/json:
+            schema:
+              type: object
+              required:
+                - transaction_id
+                - proof_url
+              properties:
+                transaction_id:
+                  type: integer
+                  description: Transaction ID
+                  example: 123
+                proof_url:
+                  type: string
+                  format: uri
+                  description: URL of payment proof image (will be downloaded and saved)
+                  example: "https://example.com/path/to/proof.jpg"
+            examples:
+              google_drive:
+                summary: Google Drive URL
+                value:
+                  transaction_id: 123
+                  proof_url: "https://drive.google.com/uc?id=FILE_ID"
+              imgur:
+                summary: Imgur URL
+                value:
+                  transaction_id: 123
+                  proof_url: "https://i.imgur.com/abc123.jpg"
+              direct_url:
+                summary: Direct Image URL
+                value:
+                  transaction_id: 123
+                  proof_url: "https://example.com/bukti_bayar.jpg"
       responses:
         "200":
           description: Payment proof uploaded successfully
@@ -2424,7 +3192,19 @@ paths:
                     example: "Bukti pembayaran berhasil diupload"
                   proof_url:
                     type: string
-                    example: "https://example.com/storage/payment-proofs/proof.jpg"
+                    format: uri
+                    example: "https://example.com/storage/payment-proofs/proof_123456.jpg"
+              examples:
+                file_upload:
+                  summary: File Upload Success
+                  value:
+                    message: "Bukti pembayaran berhasil diupload"
+                    proof_url: "https://example.com/storage/payment-proofs/proof_123456.jpg"
+                url_download:
+                  summary: URL Download Success
+                  value:
+                    message: "Bukti pembayaran berhasil diupload"
+                    proof_url: "https://example.com/storage/payment-proofs/proof_789012.jpg"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "403":
@@ -2432,7 +3212,54 @@ paths:
         "404":
           $ref: "#/components/responses/NotFoundError"
         "422":
-          $ref: "#/components/responses/ValidationError"
+          description: Validation error or URL download failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Gagal mengunduh bukti pembayaran dari URL"
+                  errors:
+                    type: object
+                    properties:
+                      proof:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          [
+                            "The proof must be an image.",
+                            "The proof may not be greater than 2048 kilobytes.",
+                          ]
+                      proof_url:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          ["URL tidak valid atau file tidak dapat diunduh"]
+              examples:
+                file_too_large:
+                  summary: File Too Large
+                  value:
+                    message: "The given data was invalid."
+                    errors:
+                      proof:
+                        ["The proof may not be greater than 2048 kilobytes."]
+                invalid_format:
+                  summary: Invalid File Format
+                  value:
+                    message: "The given data was invalid."
+                    errors:
+                      proof: ["The proof must be an image."]
+                url_download_failed:
+                  summary: URL Download Failed
+                  value:
+                    message: "Gagal mengunduh bukti pembayaran dari URL"
+                    errors:
+                      proof_url:
+                        ["URL tidak valid atau file tidak dapat diunduh"]
 
 components:
   securitySchemes:
@@ -2519,6 +3346,10 @@ components:
           enum: [admin, penjual, pembeli]
           description: User role in the system
           example: "pembeli"
+        is_active:
+          type: boolean
+          description: User account status (active/banned)
+          example: true
         email_verified_at:
           type: string
           format: date-time
@@ -3475,6 +4306,82 @@ components:
           format: date-time
           example: "2025-07-23T10:00:00Z"
 
+    # Merchant schemas
+    MerchantSummary:
+      type: object
+      description: Basic merchant information for listing
+      properties:
+        id:
+          type: integer
+          description: Merchant ID
+          example: 2
+        name:
+          type: string
+          description: Merchant name
+          example: "Warung Makan Sederhana"
+        email:
+          type: string
+          format: email
+          description: Merchant email
+          example: "penjual@mail.com"
+        total_menus:
+          type: integer
+          description: Total number of menus offered by merchant
+          example: 5
+        payment_methods_count:
+          type: integer
+          description: Number of active payment methods
+          example: 3
+        joined_at:
+          type: string
+          format: date
+          description: Date when merchant joined
+          example: "2025-07-24"
+
+    MerchantDetails:
+      type: object
+      description: Detailed merchant information including menus and payment methods
+      properties:
+        id:
+          type: integer
+          description: Merchant ID
+          example: 2
+        name:
+          type: string
+          description: Merchant name
+          example: "Warung Makan Sederhana"
+        email:
+          type: string
+          format: email
+          description: Merchant email
+          example: "penjual@mail.com"
+        joined_at:
+          type: string
+          format: date-time
+          description: Date and time when merchant joined
+          example: "2025-07-24 10:30:15"
+        total_menus:
+          type: integer
+          description: Total number of menus offered by merchant
+          example: 5
+        menus:
+          type: array
+          description: List of all menus offered by this merchant
+          items:
+            $ref: "#/components/schemas/Menu"
+        payment_methods:
+          type: array
+          description: Available payment methods for this merchant
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              name:
+                type: string
+                example: "Transfer Bank"
+
 tags:
   - name: 🔐 Authentication
     description: |
@@ -3495,6 +4402,9 @@ tags:
       - Browse categories
       - View payment methods
       - Check merchant payment options
+      - List all merchants/sellers
+      - View merchant details and menus
+      - Browse merchant catalogs
 
   - name: 👑 Admin APIs
     description: |

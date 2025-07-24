@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\PenjualController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\MerchantController;
 
 // === PUBLIC ===
 Route::post('/register', [AuthController::class, 'register']);
@@ -22,6 +23,11 @@ Route::get('/payment-methods', [PaymentMethodController::class, 'index']);
 Route::get('/merchants/{merchantId}/payment-methods', [MerchantPaymentMethodController::class, 'getAvailableForMerchant']);
 Route::get('/menus', [MenuController::class, 'index']);
 Route::get('/menus/{id}', [MenuController::class, 'show']);
+
+// Merchant endpoints
+Route::get('/merchants', [MerchantController::class, 'index']); // List all merchants
+Route::get('/merchants/{id}', [MerchantController::class, 'show']); // Get merchant details
+Route::get('/merchants/{id}/menus', [MerchantController::class, 'menus']); // Get merchant menus
 
 // === PROTECTED ===
 Route::middleware('auth:sanctum')->group(function () {
@@ -70,6 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/pembeli/transactions', [PembeliController::class, 'myTransactions']);
         Route::post('/payments', [PaymentController::class, 'store']);
         Route::post('/payments/proof', [PembeliController::class, 'uploadProof']);
+        Route::post('/pembeli/transactions/{id}/mark-as-paid', [PembeliController::class, 'markAsPaid']);
 
         // Allow pembeli to view merchant payment methods
         Route::get('/merchant-payment-methods', [MerchantPaymentMethodController::class, 'index']);
@@ -94,5 +101,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/dashboard', [AdminController::class, 'getDashboardStats']);
         Route::get('/admin/users/{id}', [AdminController::class, 'getUserDetails']);
         Route::get('/admin/transactions/{id}', [AdminController::class, 'getTransactionDetails']);
+
+        // User Management Routes
+        Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
+        Route::put('/admin/users/{id}/password', [AdminController::class, 'changeUserPassword']);
+        Route::put('/admin/users/{id}/status', [AdminController::class, 'toggleUserStatus']);
+        Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
     });
 });

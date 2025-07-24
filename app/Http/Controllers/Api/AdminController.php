@@ -9,6 +9,8 @@ use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -32,8 +34,11 @@ class AdminController extends Controller
 
             $query = User::query();
 
-            // Filter by role
-            if ($role && in_array($role, ['admin', 'penjual', 'pembeli'])) {
+            // Don't show admin users in the list
+            $query->where('role', '!=', 'admin');
+
+            // Filter by role (exclude admin from options)
+            if ($role && in_array($role, ['penjual', 'pembeli'])) {
                 $query->where('role', $role);
             }
 
@@ -272,6 +277,209 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to retrieve transaction details',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update user details
+     */
+    public function updateUser(Request $request, $id): JsonResponse
+    {
+        try {
+            // Check if user is admin
+            $user = Auth::user();
+            if (!$user || $user->role !== 'admin') {
+                return response()->json([
+                    'message' => 'Unauthorized. Admin access required.'
+                ], 403);
+            }
+
+            $targetUser = User::find($id);
+            if (!$targetUser) {
+                return response()->json([
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            // Prevent updating admin users
+            if ($targetUser->role === 'admin') {
+                return response()->json([
+                    'message' => 'Cannot update admin users'
+                ], 403);
+            }
+
+            $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'email' => [
+                    'sometimes',
+                    'string',
+                    'email',
+                    'max:255',
+                    Rule::unique('users')->ignore($targetUser->id)
+                ],
+                'role' => 'sometimes|in:penjual,pembeli',
+            ]);
+
+            $targetUser->update($request->only(['name', 'email', 'role']));
+
+            return response()->json([
+                'message' => 'User updated successfully',
+                'data' => $targetUser->fresh()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to update user',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Change user password
+     */
+    public function changeUserPassword(Request $request, $id): JsonResponse
+    {
+        try {
+            // Check if user is admin
+            $user = Auth::user();
+            if (!$user || $user->role !== 'admin') {
+                return response()->json([
+                    'message' => 'Unauthorized. Admin access required.'
+                ], 403);
+            }
+
+            $targetUser = User::find($id);
+            if (!$targetUser) {
+                return response()->json([
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            // Prevent updating admin users
+            if ($targetUser->role === 'admin') {
+                return response()->json([
+                    'message' => 'Cannot update admin user passwords'
+                ], 403);
+            }
+
+            $request->validate([
+                'password' => 'required|string|min:8|confirmed',
+            ]);
+
+            $targetUser->update([
+                'password' => Hash::make($request->password)
+            ]);
+
+            return response()->json([
+                'message' => 'User password changed successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to change user password',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete user account
+     */
+    public function deleteUser($id): JsonResponse
+    {
+        try {
+            // Check if user is admin
+            $user = Auth::user();
+            if (!$user || $user->role !== 'admin') {
+                return response()->json([
+                    'message' => 'Unauthorized. Admin access required.'
+                ], 403);
+            }
+
+            $targetUser = User::find($id);
+            if (!$targetUser) {
+                return response()->json([
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            // Prevent deleting admin users
+            if ($targetUser->role === 'admin') {
+                return response()->json([
+                    'message' => 'Cannot delete admin users'
+                ], 403);
+            }
+
+            // Check if user has active transactions
+            $activeTransactions = $targetUser->transactions()
+                ->whereIn('status', ['pending', 'paid', 'confirmed', 'preparing', 'ready'])
+                ->count();
+
+            if ($activeTransactions > 0) {
+                return response()->json([
+                    'message' => 'Cannot delete user with active transactions'
+                ], 400);
+            }
+
+            $targetUser->delete();
+
+            return response()->json([
+                'message' => 'User deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete user',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Ban/Unban user
+     */
+    public function toggleUserStatus(Request $request, $id): JsonResponse
+    {
+        try {
+            // Check if user is admin
+            $user = Auth::user();
+            if (!$user || $user->role !== 'admin') {
+                return response()->json([
+                    'message' => 'Unauthorized. Admin access required.'
+                ], 403);
+            }
+
+            $targetUser = User::find($id);
+            if (!$targetUser) {
+                return response()->json([
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            // Prevent updating admin users
+            if ($targetUser->role === 'admin') {
+                return response()->json([
+                    'message' => 'Cannot ban/unban admin users'
+                ], 403);
+            }
+
+            $request->validate([
+                'is_active' => 'required|boolean',
+            ]);
+
+            $targetUser->update([
+                'is_active' => $request->is_active
+            ]);
+
+            $status = $request->is_active ? 'activated' : 'banned';
+
+            return response()->json([
+                'message' => "User {$status} successfully",
+                'data' => $targetUser->fresh()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to update user status',
                 'error' => $e->getMessage()
             ], 500);
         }
