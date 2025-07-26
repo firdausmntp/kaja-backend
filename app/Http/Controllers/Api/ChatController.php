@@ -20,12 +20,12 @@ class ChatController extends Controller
         // Validate user access to this transaction
         $user = $request->user();
 
-        // Check if user is the customer (pembeli)
-        $isCustomer = $transaction->user_id === $user->id;
+        // Check if user is the customer (pembeli) - cast to int for comparison
+        $isCustomer = (int)$transaction->user_id === (int)$user->id;
 
-        // Check if user is the merchant (penjual)
+        // Check if user is the merchant (penjual) - cast to int for comparison
         $isMerchant = false;
-        if ($transaction->cashier_id === $user->id) {
+        if ($transaction->cashier_id && (int)$transaction->cashier_id === (int)$user->id) {
             $isMerchant = true;
         } else {
             // If cashier_id is null, check if user owns any menu in transaction items
@@ -48,6 +48,21 @@ class ChatController extends Controller
             ->where('transaction_id', $transaction->id)
             ->orderBy('created_at', 'asc')
             ->paginate(50);
+
+        // Update attachment URLs to use public_storage
+        $chats->getCollection()->transform(function ($chat) {
+            if ($chat->attachment_url) {
+                // Convert old storage paths to new public_storage paths
+                if (strpos($chat->attachment_url, '/storage/') !== false) {
+                    $relativePath = str_replace('/storage/', '', $chat->attachment_url);
+                    $chat->attachment_url = asset('public_storage/' . $relativePath);
+                } elseif (!str_contains($chat->attachment_url, 'http')) {
+                    // If it's just a relative path without domain
+                    $chat->attachment_url = asset('public_storage/' . $chat->attachment_url);
+                }
+            }
+            return $chat;
+        });
 
         // Mark messages as read for current user
         Chat::where('transaction_id', $transaction->id)
@@ -79,12 +94,12 @@ class ChatController extends Controller
     {
         $user = $request->user();
 
-        // Check if user is the customer (pembeli)
-        $isCustomer = $transaction->user_id === $user->id;
+        // Check if user is the customer (pembeli) - cast to int for comparison
+        $isCustomer = (int)$transaction->user_id === (int)$user->id;
 
-        // Check if user is the merchant (penjual)
+        // Check if user is the merchant (penjual) - cast to int for comparison
         $isMerchant = false;
-        if ($transaction->cashier_id === $user->id) {
+        if ($transaction->cashier_id && (int)$transaction->cashier_id === (int)$user->id) {
             $isMerchant = true;
         } else {
             // If cashier_id is null, check if user owns any menu in transaction items
@@ -128,9 +143,13 @@ class ChatController extends Controller
             $fileName = time() . '_' . $file->getClientOriginalName();
             $filePath = $file->storeAs('chat-attachments', $fileName, 'public');
 
-            $chatData['attachment_url'] = Storage::url($filePath);
+            // Use asset for consistent URL generation
+            $chatData['attachment_url'] = asset('public_storage/' . $filePath);
             $chatData['attachment_type'] = $this->getAttachmentType($file->getClientOriginalExtension());
             $chatData['message_type'] = $chatData['attachment_type'];
+
+            // For shared hosting: also copy to public/public_storage directly
+            $this->ensurePublicStorageExists($filePath, file_get_contents($file->getRealPath()));
         }
 
         $chat = Chat::create($chatData);
@@ -236,8 +255,16 @@ class ChatController extends Controller
 
         // Delete attachment file if exists
         if ($chat->attachment_url) {
-            $path = str_replace('/storage/', '', $chat->attachment_url);
+            // Handle both old /storage/ and new /public_storage/ paths
+            $path = str_replace(['/storage/', '/public_storage/'], '', $chat->attachment_url);
+            $path = str_replace(url('/'), '', $path); // Remove domain if present
             Storage::disk('public')->delete($path);
+
+            // Also delete from public/public_storage if exists
+            $publicStoragePath = public_path('public_storage/' . $path);
+            if (file_exists($publicStoragePath)) {
+                unlink($publicStoragePath);
+            }
         }
 
         $chat->delete();
@@ -264,5 +291,31 @@ class ChatController extends Controller
         }
 
         return 'document'; // default
+    }
+
+    /**
+     * Ensure file exists in public/public_storage for shared hosting
+     * 
+     * @param string $filepath
+     * @param string $content
+     */
+    private function ensurePublicStorageExists($filepath, $content)
+    {
+        try {
+            $publicStoragePath = public_path('public_storage/' . $filepath);
+            $publicDir = dirname($publicStoragePath);
+
+            // Create directory if it doesn't exist
+            if (!is_dir($publicDir)) {
+                mkdir($publicDir, 0755, true);
+            }
+
+            // Copy file to public/public_storage
+            file_put_contents($publicStoragePath, $content);
+
+            \Illuminate\Support\Facades\Log::info('File copied to public storage: ' . $publicStoragePath);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to copy file to public storage: ' . $e->getMessage());
+        }
     }
 }

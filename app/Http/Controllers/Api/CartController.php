@@ -30,6 +30,16 @@ class CartController extends Controller
         } else {
             // Get all active carts if no merchant specified
             $carts = $query->get();
+
+            // Update image_url for all menus in all carts
+            foreach ($carts as $cart) {
+                foreach ($cart->cartItems as $item) {
+                    if ($item->menu && $item->menu->image_url) {
+                        $item->menu->image_url = asset('public_storage/' . $item->menu->image_url);
+                    }
+                }
+            }
+
             return response()->json([
                 'message' => 'Carts retrieved successfully',
                 'data' => $carts,
@@ -44,6 +54,13 @@ class CartController extends Controller
                 'message' => 'Cart not found',
                 'data' => null
             ]);
+        }
+
+        // Update image_url for all menus in this cart
+        foreach ($cart->cartItems as $item) {
+            if ($item->menu && $item->menu->image_url) {
+                $item->menu->image_url = asset('public_storage/' . $item->menu->image_url);
+            }
         }
 
         return response()->json([
@@ -75,6 +92,13 @@ class CartController extends Controller
             ], 400);
         }
 
+        // Check if stock is sufficient
+        if ($menu->stock < $request->quantity) {
+            return response()->json([
+                'message' => "Insufficient stock. Available: {$menu->stock}, Requested: {$request->quantity}"
+            ], 400);
+        }
+
         DB::beginTransaction();
         try {
             // Get or create cart for this merchant
@@ -92,8 +116,16 @@ class CartController extends Controller
                 ->first();
 
             if ($cartItem) {
+                // Check if total quantity (existing + new) is available
+                $totalQuantity = $cartItem->quantity + $request->quantity;
+                if ($menu->stock < $totalQuantity) {
+                    return response()->json([
+                        'message' => "Insufficient stock. Available: {$menu->stock}, In cart: {$cartItem->quantity}, Requested: {$request->quantity}"
+                    ], 400);
+                }
+
                 // Update quantity if item exists
-                $cartItem->quantity += $request->quantity;
+                $cartItem->quantity = $totalQuantity;
                 $cartItem->notes = $request->notes;
                 $cartItem->save();
             } else {
@@ -144,6 +176,13 @@ class CartController extends Controller
         if ($request->quantity == 0) {
             // Remove item if quantity is 0
             return $this->removeItem($itemId);
+        }
+
+        // Check if stock is sufficient for the new quantity
+        if ($cartItem->menu->stock < $request->quantity) {
+            return response()->json([
+                'message' => "Insufficient stock. Available: {$cartItem->menu->stock}, Requested: {$request->quantity}"
+            ], 400);
         }
 
         $cartItem->update([
@@ -236,11 +275,18 @@ class CartController extends Controller
             ], 400);
         }
 
-        // Check if all items are still available
+        // Check if all items are still available and have sufficient stock
         foreach ($cart->cartItems as $item) {
             if (!$item->menu->is_available) {
                 return response()->json([
                     'message' => "Menu '{$item->menu->name}' is no longer available"
+                ], 400);
+            }
+
+            // Check if stock is sufficient
+            if ($item->menu->stock < $item->quantity) {
+                return response()->json([
+                    'message' => "Insufficient stock for menu '{$item->menu->name}'. Available: {$item->menu->stock}, Requested: {$item->quantity}"
                 ], 400);
             }
         }

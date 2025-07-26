@@ -60,4 +60,55 @@ class Transaction extends Model
     {
         return $this->hasMany(Chat::class);
     }
+
+    /**
+     * Handle stock management when transaction status changes
+     * 
+     * @param string $newStatus
+     * @param string $oldStatus
+     */
+    public function handleStockManagement($newStatus, $oldStatus = null)
+    {
+        // Reduce stock when status changes to 'paid'
+        if ($newStatus === 'paid' && $oldStatus !== 'paid') {
+            $this->reduceStock();
+        }
+
+        // Restore stock when status changes to 'cancelled' AND was previously paid
+        if ($newStatus === 'cancelled' && $oldStatus === 'paid') {
+            $this->restoreStock();
+        }
+
+        // Restore stock when changing to cancelled from any non-cancelled status
+        // but only if it wasn't paid before (to avoid double restoration)
+        if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled' && $oldStatus !== 'paid') {
+            // Only restore if the transaction was actually paid at some point
+            // For now, we'll skip this to avoid complexity
+            // In production, you might want to track payment history
+        }
+    }
+
+    /**
+     * Reduce stock for all items in transaction
+     */
+    private function reduceStock()
+    {
+        foreach ($this->items as $item) {
+            if ($item->menu) {
+                $item->menu->reduceStock($item->quantity);
+            }
+        }
+    }
+
+    /**
+     * Restore stock for all items in transaction
+     */
+    private function restoreStock()
+    {
+        foreach ($this->items as $item) {
+            if ($item->menu) {
+                $item->menu->restoreStock($item->quantity);
+            }
+        }
+    }
 }

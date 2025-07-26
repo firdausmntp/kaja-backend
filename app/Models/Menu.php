@@ -50,4 +50,31 @@ class Menu extends Model
     {
         return $this->merchant ? $this->merchant->name : 'Unknown Merchant';
     }
+
+    /**
+     * Reduce stock when order is paid
+     * 
+     * @param int $quantity
+     * @return bool
+     */
+    public function reduceStock($quantity)
+    {
+        if ($this->stock >= $quantity) {
+            $this->decrement('stock', $quantity);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Restore stock when order is cancelled
+     * 
+     * @param int $quantity
+     * @return bool
+     */
+    public function restoreStock($quantity)
+    {
+        $this->increment('stock', $quantity);
+        return true;
+    }
 }

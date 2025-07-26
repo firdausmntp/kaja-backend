@@ -28,13 +28,13 @@ class PenjualController extends Controller
                 // Add image URLs for menu items
                 $transaction->items->each(function ($item) {
                     if ($item->menu && $item->menu->image_url) {
-                        $item->menu->image_url = asset('storage/' . $item->menu->image_url);
+                        $item->menu->image_url = asset('public_storage/' . $item->menu->image_url);
                     }
                 });
 
                 // Add payment proof URL if exists
                 if ($transaction->payment && $transaction->payment->proof) {
-                    $transaction->payment->proof_url = asset('storage/' . $transaction->payment->proof);
+                    $transaction->payment->proof_url = asset('public_storage/' . $transaction->payment->proof);
                     // Remove raw proof path for cleaner response
                     unset($transaction->payment->proof);
                 }
@@ -54,9 +54,16 @@ class PenjualController extends Controller
         $transaction = Transaction::where('cashier_id', Auth::id())
             ->findOrFail($id); // Add ownership check
 
+        // Get old status before updating
+        $oldStatus = $transaction->status;
+
         $transaction->update([
             'status' => $request->status
         ]);
+
+        // Handle stock management with loaded items
+        $transaction->load('items.menu');
+        $transaction->handleStockManagement($request->status, $oldStatus);
 
         $transaction->load([
             'user:id,name,email',
@@ -66,7 +73,7 @@ class PenjualController extends Controller
 
         // Add payment proof URL if exists
         if ($transaction->payment && $transaction->payment->proof) {
-            $transaction->payment->proof_url = asset('storage/' . $transaction->payment->proof);
+            $transaction->payment->proof_url = asset('public_storage/' . $transaction->payment->proof);
             // Remove raw proof path for cleaner response
             unset($transaction->payment->proof);
         }
@@ -91,13 +98,13 @@ class PenjualController extends Controller
         // Add image URLs for menu items
         $transaction->items->each(function ($item) {
             if ($item->menu && $item->menu->image_url) {
-                $item->menu->image_url = asset('storage/' . $item->menu->image_url);
+                $item->menu->image_url = asset('public_storage/' . $item->menu->image_url);
             }
         });
 
         // Add payment proof URL if exists
         if ($transaction->payment && $transaction->payment->proof) {
-            $transaction->payment->proof_url = asset('storage/' . $transaction->payment->proof);
+            $transaction->payment->proof_url = asset('public_storage/' . $transaction->payment->proof);
             // Remove raw proof path for cleaner response
             unset($transaction->payment->proof);
         }

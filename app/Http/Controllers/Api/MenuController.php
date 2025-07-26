@@ -18,7 +18,7 @@ class MenuController extends Controller
         $menus = Menu::with(['category', 'merchant:id,name'])
             ->get()
             ->map(function ($menu) {
-                $menu->image_url = $menu->image_url ? asset('storage/' . $menu->image_url) : null;
+                $menu->image_url = $menu->image_url ? asset('public_storage/' . $menu->image_url) : null;
                 return $menu;
             });
 
@@ -33,7 +33,7 @@ class MenuController extends Controller
             return response()->json(['message' => 'Menu tidak ditemukan'], 404);
         }
 
-        $menu->image_url = $menu->image_url ? asset('storage/' . $menu->image_url) : null;
+        $menu->image_url = $menu->image_url ? asset('public_storage/' . $menu->image_url) : null;
 
         return response()->json($menu);
     }
@@ -53,7 +53,7 @@ class MenuController extends Controller
             ->where('user_id', $user->id)
             ->get()
             ->map(function ($menu) {
-                $menu->image_url = $menu->image_url ? asset('storage/' . $menu->image_url) : null;
+                $menu->image_url = $menu->image_url ? asset('public_storage/' . $menu->image_url) : null;
                 return $menu;
             });
 
@@ -115,8 +115,12 @@ class MenuController extends Controller
 
     public function update(Request $request, $id)
     {
-        if (Auth::user()->role !== 'penjual') {
-            return response()->json(['message' => 'Hanya penjual yang dapat mengedit menu'], 403);
+        $user = Auth::user();
+
+        if ($user->role !== 'penjual') {
+            return response()->json([
+                'message' => 'Hanya penjual yang dapat mengedit menu'
+            ], 403);
         }
 
         $menu = Menu::find($id);
@@ -125,9 +129,11 @@ class MenuController extends Controller
             return response()->json(['message' => 'Menu tidak ditemukan'], 404);
         }
 
-        // Check if user owns this menu
-        if ($menu->user_id !== Auth::user()->id) {
-            return response()->json(['message' => 'Anda tidak memiliki akses untuk mengedit menu ini'], 403);
+        // Check if user owns this menu (cast to int for comparison)
+        if ((int)$menu->user_id !== (int)$user->id) {
+            return response()->json([
+                'message' => 'Anda tidak memiliki akses untuk mengedit menu ini'
+            ], 403);
         }
 
         $request->validate([
@@ -164,14 +170,21 @@ class MenuController extends Controller
         $menu->fill($request->only(['name', 'description', 'price', 'stock', 'category_id']));
         $menu->save();
 
+        // Format image URL for response
+        $menu->image_url = $menu->image_url ? asset('public_storage/' . $menu->image_url) : null;
+
         return response()->json(['message' => 'Menu berhasil diperbarui', 'menu' => $menu]);
     }
 
 
     public function destroy($id)
     {
-        if (Auth::user()->role !== 'penjual') {
-            return response()->json(['message' => 'Hanya penjual yang dapat menghapus menu'], 403);
+        $user = Auth::user();
+
+        if ($user->role !== 'penjual') {
+            return response()->json([
+                'message' => 'Hanya penjual yang dapat menghapus menu'
+            ], 403);
         }
 
         $menu = Menu::find($id);
@@ -180,9 +193,11 @@ class MenuController extends Controller
             return response()->json(['message' => 'Menu tidak ditemukan'], 404);
         }
 
-        // Check if user owns this menu
-        if ($menu->user_id !== Auth::user()->id) {
-            return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus menu ini'], 403);
+        // Check if user owns this menu (cast to int for comparison)
+        if ((int)$menu->user_id !== (int)$user->id) {
+            return response()->json([
+                'message' => 'Anda tidak memiliki akses untuk menghapus menu ini'
+            ], 403);
         }
 
         $menu->delete();
@@ -264,7 +279,7 @@ class MenuController extends Controller
     }
 
     /**
-     * Ensure file exists in public/storage for shared hosting
+     * Ensure file exists in public/public_storage for shared hosting
      * 
      * @param string $filepath
      * @param string $content
@@ -272,7 +287,7 @@ class MenuController extends Controller
     private function ensurePublicStorageExists($filepath, $content)
     {
         try {
-            $publicStoragePath = public_path('storage/' . $filepath);
+            $publicStoragePath = public_path('public_storage/' . $filepath);
             $publicDir = dirname($publicStoragePath);
 
             // Create directory if it doesn't exist
@@ -280,7 +295,7 @@ class MenuController extends Controller
                 mkdir($publicDir, 0755, true);
             }
 
-            // Copy file to public/storage
+            // Copy file to public/public_storage
             file_put_contents($publicStoragePath, $content);
 
             Log::info('File copied to public storage: ' . $publicStoragePath);

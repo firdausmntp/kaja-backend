@@ -58,7 +58,14 @@ class PaymentController extends Controller
             'proof' => $proofPath,
         ]);
 
+        // Get old status before updating
+        $oldStatus = $transaction->status;
+
         $transaction->update(['status' => 'paid']);
+
+        // Handle stock management with loaded items
+        $transaction->load('items.menu');
+        $transaction->handleStockManagement('paid', $oldStatus);
 
         return response()->json([
             'message' => 'Pembayaran berhasil',
@@ -73,7 +80,7 @@ class PaymentController extends Controller
             ->firstOrFail();
 
         if ($payment->proof) {
-            $payment->proof = asset('storage/' . $payment->proof);
+            $payment->proof = asset('public_storage/' . $payment->proof);
         }
 
         return response()->json($payment);
@@ -150,7 +157,7 @@ class PaymentController extends Controller
     private function ensurePublicStorageExists($relativePath, $content)
     {
         try {
-            $publicPath = public_path('storage/' . $relativePath);
+            $publicPath = public_path('public_storage/' . $relativePath);
             $directory = dirname($publicPath);
 
             // Create directory if it doesn't exist
@@ -158,7 +165,7 @@ class PaymentController extends Controller
                 mkdir($directory, 0755, true);
             }
 
-            // Write file directly to public/storage
+            // Write file directly to public/public_storage
             file_put_contents($publicPath, $content);
         } catch (\Exception $e) {
             // Silent fail - symlink method should work

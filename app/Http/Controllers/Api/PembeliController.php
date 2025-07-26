@@ -52,13 +52,13 @@ class PembeliController extends Controller
                 // Add image URLs for menu items
                 $transaction->items->each(function ($item) {
                     if ($item->menu && $item->menu->image_url) {
-                        $item->menu->image_url = asset('storage/' . $item->menu->image_url);
+                        $item->menu->image_url = asset('public_storage/' . $item->menu->image_url);
                     }
                 });
 
                 // Add payment proof URL if exists
                 if ($transaction->payment && $transaction->payment->proof) {
-                    $transaction->payment->proof_url = asset('storage/' . $transaction->payment->proof);
+                    $transaction->payment->proof_url = asset('public_storage/' . $transaction->payment->proof);
                     // Remove raw proof path for cleaner response
                     unset($transaction->payment->proof);
                 }
@@ -141,7 +141,7 @@ class PembeliController extends Controller
 
         return response()->json([
             'message' => 'Bukti pembayaran berhasil diupload',
-            'proof_url' => asset('storage/' . $path)
+            'proof_url' => asset('public_storage/' . $path)
         ]);
     }
 
@@ -174,8 +174,15 @@ class PembeliController extends Controller
             return response()->json(['message' => 'Transaction sudah ditandai sebagai paid'], 400);
         }
 
+        // Get old status before updating
+        $oldStatus = $transaction->status;
+
         // Update transaction status
         $transaction->update(['status' => 'paid']);
+
+        // Handle stock management with loaded items
+        $transaction->load('items.menu');
+        $transaction->handleStockManagement('paid', $oldStatus);
 
         // Create or update payment record
         $payment = $transaction->payment;
@@ -268,12 +275,12 @@ class PembeliController extends Controller
     }
 
     /**
-     * Ensure file exists in public/storage for shared hosting
+     * Ensure file exists in public/public_storage for shared hosting
      */
     private function ensurePublicStorageExists($relativePath, $content)
     {
         try {
-            $publicPath = public_path('storage/' . $relativePath);
+            $publicPath = public_path('public_storage/' . $relativePath);
             $directory = dirname($publicPath);
 
             // Create directory if it doesn't exist
@@ -281,7 +288,7 @@ class PembeliController extends Controller
                 mkdir($directory, 0755, true);
             }
 
-            // Write file directly to public/storage
+            // Write file directly to public/public_storage
             file_put_contents($publicPath, $content);
         } catch (\Exception $e) {
             // Silent fail - symlink method should work

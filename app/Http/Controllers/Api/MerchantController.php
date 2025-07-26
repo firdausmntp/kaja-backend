@@ -66,7 +66,7 @@ class MerchantController extends Controller
 
         // Transform menus to include full image URL
         $merchant->menus->transform(function ($menu) {
-            $menu->image_url = $menu->image_url ? asset('storage/' . $menu->image_url) : null;
+            $menu->image_url = $menu->image_url ? asset('public_storage/' . $menu->image_url) : null;
             return $menu;
         });
 
@@ -114,7 +114,7 @@ class MerchantController extends Controller
             ->select('id', 'name', 'description', 'price', 'stock', 'image_url', 'category_id', 'user_id')
             ->get()
             ->map(function ($menu) {
-                $menu->image_url = $menu->image_url ? asset('storage/' . $menu->image_url) : null;
+                $menu->image_url = $menu->image_url ? asset('public_storage/' . $menu->image_url) : null;
                 return $menu;
             });
 
