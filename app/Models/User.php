@@ -63,4 +63,15 @@ class User extends Authenticatable
     {
         return $this->carts()->where('merchant_id', $merchantId)->where('status', 'active')->first();
     }
+
+    // Transaction relationships
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function merchantTransactions()
+    {
+        return $this->hasMany(Transaction::class, 'cashier_id');
+    }
 }

@@ -411,12 +411,18 @@ class AdminController extends Controller
                 ], 403);
             }
 
-            // Check if user has active transactions
-            $activeTransactions = $targetUser->transactions()
+            // Check if user has active transactions (as customer or merchant)
+            $activeCustomerTransactions = $targetUser->transactions()
                 ->whereIn('status', ['pending', 'paid', 'confirmed', 'preparing', 'ready'])
                 ->count();
 
-            if ($activeTransactions > 0) {
+            $activeMerchantTransactions = $targetUser->merchantTransactions()
+                ->whereIn('status', ['pending', 'paid', 'confirmed', 'preparing', 'ready'])
+                ->count();
+
+            $totalActiveTransactions = $activeCustomerTransactions + $activeMerchantTransactions;
+
+            if ($totalActiveTransactions > 0) {
                 return response()->json([
                     'message' => 'Cannot delete user with active transactions'
                 ], 400);
