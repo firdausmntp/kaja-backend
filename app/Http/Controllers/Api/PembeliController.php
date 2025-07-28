@@ -106,6 +106,8 @@ class PembeliController extends Controller
         if ($request->hasFile('proof')) {
             // Upload from file
             $path = $request->file('proof')->store('payment-proofs', 'public');
+            // For shared hosting: also copy to public/public_storage directly
+            $this->ensurePublicStorageExists($path, file_get_contents($request->file('proof')->getRealPath()));
         } elseif ($request->proof_url) {
             // Download from URL
             $path = $this->downloadAndSaveProof($request->proof_url);
@@ -122,11 +124,11 @@ class PembeliController extends Controller
             ], 422);
         }
 
-        // Update or create payment record
+        // Update or create payment record - menggunakan field 'proof' bukan 'proof_url'
         $payment = $transaction->payment;
         if ($payment) {
             $payment->update([
-                'proof_url' => $path,
+                'proof' => $path,
                 'status' => 'pending_verification'
             ]);
         } else {
@@ -134,7 +136,7 @@ class PembeliController extends Controller
                 'transaction_id' => $transaction->id,
                 'amount' => $transaction->total_price,
                 'method' => $transaction->payment_method ?? 'transfer',
-                'proof_url' => $path,
+                'proof' => $path,
                 'status' => 'pending_verification'
             ]);
         }

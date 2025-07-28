@@ -10,16 +10,34 @@ info:
 
     - **Authentication System** - Secure user registration, login, and profile management
     - **Multi-Role Support** - Admin, Seller (Penjual), and Buyer (Pembeli) roles
-    - **Menu Management** - Complete CRUD operations for food items and categories
-    - **Smart Cart System** - Automatic price calculations, merchant-specific carts, and real-time updates
-    - **Transaction Processing** - Order creation, status tracking, and management
+    - **Menu Management** - Complete CRUD operations for food items and categories with automatic stock management
+    - **Smart Cart System** - Automatic price calculations, merchant-specific carts, real-time updates, and stock validation
+    - **Transaction Processing** - Order creation, status tracking, and automatic stock management
+    - **Automatic Stock Management** - Stock reduces on payment, restores on cancellation, validates availability
     - **Payment Integration** - Multiple payment methods (Cash, Bank Transfer, E-Wallet) with flexible proof upload
     - **Payment Proof Upload** - Support both file upload and URL download for payment proof
     - **Manual Payment Marking** - Mark transactions as paid without proof for cash/manual payments
     - **Real-time Chat** - Transaction-based messaging between buyers and sellers
     - **File Upload Support** - Images and documents for chat and payment proof
 
-    ## 💰 Payment Features
+    ## � Stock Management
+
+    The system includes automatic stock management with the following features:
+
+    - **Automatic Stock Reduction** - When a transaction status changes to 'paid', menu stock automatically reduces by the ordered quantity
+    - **Automatic Stock Restoration** - When a transaction is cancelled, menu stock is restored to the previous amount
+    - **Stock Validation** - Cart and checkout processes validate stock availability before allowing orders
+    - **Atomic Operations** - Stock changes are performed atomically to prevent race conditions
+    - **Real-time Availability** - Menu availability is checked in real-time during cart operations
+
+    **Stock Lifecycle:**
+    1. Customer adds items to cart → Stock availability validated
+    2. Customer proceeds to checkout → Final stock validation
+    3. Transaction created with 'pending' status → Stock reserved but not yet reduced
+    4. Payment confirmed, status changes to 'paid' → Stock automatically reduced
+    5. If transaction cancelled → Stock automatically restored
+
+    ## �💰 Payment Features
 
     The payment system supports multiple workflows:
 
@@ -41,16 +59,30 @@ info:
 
     ## 📋 Changelog
 
-    ### Version 2.1.0 (2025-07-23)
-    - Enhanced cart system documentation with automatic calculation details
-    - Improved CartItem and Cart schema definitions with better validation
-    - Added comprehensive error handling examples for cart operations
-    - Updated decimal precision specifications for price fields
-    - Enhanced business rules documentation for cart management
+    ### Version 2.5.0 (2025-07-28) - Latest
+    - ✅ **NEW**: Complete automatic stock management system with atomic operations
+    - ✅ **NEW**: Stock automatically reduces when transaction status changes to 'paid'
+    - ✅ **NEW**: Stock automatically restores when transaction is cancelled
+    - ✅ **NEW**: Real-time stock validation in cart and checkout processes
+    - ✅ **ENHANCED**: Chat system with proper authorization and type casting fixes
+    - ✅ **ENHANCED**: User model with complete transaction relations for admin operations
+    - ✅ **ENHANCED**: Payment proof system with dual storage support (shared hosting compatible)
+    - 🔧 **FIXED**: Payment proof upload consistency - unified 'proof' field usage
+    - 🔧 **FIXED**: Payment proof display in API responses with correct field mapping
+    - 🔧 **FIXED**: Chat authorization 403 errors due to type mismatches (string vs integer)
+    - 🔧 **FIXED**: Admin user deletion errors with missing transaction relations
+    - 🔧 **FIXED**: Storage path migration from /storage/ to /public_storage/ for shared hosting
+    - 🔧 **FIXED**: File upload endpoints for chat attachments and payment proofs
+    - 🛡️ **SECURITY**: Enhanced authorization checks with proper type casting
+    - 🛡️ **SECURITY**: Atomic database operations for stock management preventing race conditions
 
-    ## � Changelog
+    ### Version 2.4.0 (2025-07-27)
+    - ✅ **NEW**: Menu stock management with reduceStock() and restoreStock() methods
+    - ✅ **NEW**: Transaction-based stock lifecycle handling
+    - ✅ **ENHANCED**: Cart system with stock availability validation
+    - 🔧 **FIXED**: Transaction creation flow with proper stock management hooks
 
-    ### v2.3.0 (2025-07-24)
+    ### Version 2.3.0 (2025-07-24)
     - ✅ **NEW**: Admin user management system
     - ✅ **NEW**: Update user details (`PUT /admin/users/{id}`)
     - ✅ **NEW**: Change user passwords (`PUT /admin/users/{id}/password`)
@@ -60,7 +92,7 @@ info:
     - 🔒 **SECURITY**: Admin users are not shown in user listings for security
     - 🔒 **SECURITY**: Admin accounts cannot be modified by other admins
 
-    ### v2.2.0 (2025-07-24)
+    ### Version 2.2.0 (2025-07-24)
     - ✅ **NEW**: Mark transaction as paid without proof (`POST /pembeli/transactions/{id}/mark-as-paid`)
     - ✅ **ENHANCED**: Payment proof upload now supports URL download
     - ✅ **ENHANCED**: Both `/payments` and `/payments/proof` endpoints support URL-based proof upload
@@ -68,11 +100,67 @@ info:
     - 🔧 **FIXED**: Transaction creation now requires payment_method selection
     - 🔧 **FIXED**: Consistent cashier_id population in transactions
 
-    ### v2.1.0 (Previous)
-    - Merchant API endpoints
-    - Cart management system
-    - Transaction-based chat system
-    - Enhanced authentication and authorization
+    ### Version 2.1.0 (2025-07-23)
+    - Enhanced cart system documentation with automatic calculation details
+    - Improved CartItem and Cart schema definitions with better validation
+    - Added comprehensive error handling examples for cart operations
+    - Updated decimal precision specifications for price fields
+    - Enhanced business rules documentation for cart management
+
+    ## 💡 File Storage System
+
+    The system uses a dual storage approach for maximum compatibility:
+
+    **Storage Locations:**
+    - `storage/app/public/` - Laravel standard storage for local development
+    - `public/public_storage/` - Public accessible directory for shared hosting
+
+    **File Types Supported:**
+    - **Payment Proofs**: JPG, PNG, GIF, WebP (max 2MB)
+    - **Chat Attachments**: Images and documents (max 10MB)
+    - **Menu Images**: JPG, PNG, GIF, WebP (max 5MB)
+
+    **URL Generation:**
+    All file URLs use the `public_storage` path for consistency:
+    ```
+    http://domain.com/public_storage/payment-proofs/proof_123.jpg
+    http://domain.com/public_storage/menu-images/menu_456.jpg
+    http://domain.com/public_storage/chat-attachments/chat_789.pdf
+    ```
+
+    ## 🔧 Troubleshooting & Testing
+
+    **Common Issues:**
+
+    1. **Payment Proof Not Displaying (proof field NULL)**
+       - Ensure using `proof` field, not `proof_url` in upload requests
+       - Check dual storage directory permissions
+       - Verify file actually uploaded to both storage locations
+
+    2. **Chat Authorization 403 Errors**
+       - Fixed with proper type casting (string vs integer comparison)
+       - Ensure user has access to transaction (buyer or seller)
+
+    3. **Stock Management Issues**
+       - Stock automatically reduces when status changes to 'paid'
+       - Stock restores when status changes to 'cancelled'
+       - Check menu stock levels before adding to cart
+
+    **Testing Commands:**
+    ```bash
+    # Test payment proof upload
+    curl -X POST http://kaja.test/api/payments/proof \
+      -H "Authorization: Bearer TOKEN" \
+      -F "transaction_id=123" \
+      -F "proof=@/path/to/proof.jpg"
+
+    # Test chat image upload
+    curl -X POST http://kaja.test/api/transactions/123/chats \
+      -H "Authorization: Bearer TOKEN" \
+      -F "message=Test image" \
+      -F "message_type=image" \
+      -F "attachment=@/path/to/image.jpg"
+    ```
 
     ## �🔐 Authentication
 
@@ -101,7 +189,7 @@ info:
 
     Production: `https://semenjana.biz.id/kaja/api`
 
-  version: 2.3.0
+  version: 2.5.0
   contact:
     name: Kaja API Support
     email: support@semenjana.biz.id
@@ -593,10 +681,15 @@ paths:
       description: |
         Get all chat messages for a specific transaction.
 
+        **Authorization:** 
+        - User must be either the buyer (customer) or seller (merchant) of the transaction
+        - Fixed: Type casting ensures proper authorization (no more 403 errors due to string/int mismatch)
+
         **Features:**
         - Automatically marks messages as read
         - Returns messages in chronological order
         - Includes sender information and attachments
+        - Proper file URL generation with public_storage paths
       operationId: getChatMessages
       parameters:
         - name: id
@@ -666,9 +759,26 @@ paths:
         - `image` - Image attachment (JPG, PNG, GIF)
         - `document` - Document attachment (PDF, DOC, etc.)
 
+        **Authorization:** 
+        - User must be either the buyer (customer) or seller (merchant) of the transaction
+        - Fixed: Proper type casting prevents authorization errors
+
+        **File Storage:**
+        - Files stored in dual storage system (storage/app/public + public/public_storage)
+        - URLs generated with public_storage path for compatibility
+
         **File Limits:**
         - Maximum file size: 10MB
-        - Supported formats: Images, Documents
+        - Supported formats: Images (JPG, PNG, GIF, WebP), Documents (PDF, DOC, DOCX)
+
+        **Example curl for image upload:**
+        ```bash
+        curl -X POST /api/transactions/{id}/chats \
+          -H "Authorization: Bearer YOUR_TOKEN" \
+          -F "message=Ini bukti transfer" \
+          -F "message_type=image" \
+          -F "attachment=@/path/to/image.jpg"
+        ```
       operationId: sendChatMessage
       parameters:
         - name: id
@@ -3112,9 +3222,16 @@ paths:
       description: |
         Upload payment proof for a transaction. Supports both file upload and URL download.
 
+        **IMPORTANT:** Always use the `proof` field for file uploads, not `proof_url`.
+        The `proof_url` is auto-generated for API responses.
+
         **Two methods available:**
         1. **File Upload**: Use multipart/form-data with `proof` field
-        2. **URL Download**: Use application/json with `proof_url` field
+        2. **URL Download**: Use application/json with `proof_url` field (for downloads)
+
+        **Storage System:**
+        - Files saved to both storage/app/public/ and public/public_storage/
+        - URLs generated with public_storage path for shared hosting compatibility
 
         **Supported formats:** JPG, PNG, GIF, WebP (max 2MB)
 
@@ -3529,7 +3646,11 @@ components:
           example: 25000
         stock:
           type: integer
-          description: Available stock
+          description: |
+            Available stock with automatic management:
+            - Reduces automatically when transaction status changes to 'paid'
+            - Restores automatically when transaction is cancelled
+            - Validated during cart operations and checkout
           example: 10
         image_url:
           type: string
@@ -3589,7 +3710,14 @@ components:
         stock:
           type: integer
           minimum: 0
-          description: Available stock
+          description: |
+            Available stock quantity. 
+
+            **Stock Management:**
+            - Automatically reduces when order status changes to 'paid'
+            - Automatically restores when order is cancelled
+            - Validated during cart operations and checkout
+            - Must be ≥ 0 (zero means out of stock)
           example: 10
         category_id:
           type: integer
@@ -3623,6 +3751,16 @@ components:
           type: string
           enum:
             [pending, paid, confirmed, preparing, ready, completed, cancelled]
+          description: |
+            Transaction status with automatic stock management:
+
+            - **pending**: Order created, stock reserved but not reduced
+            - **paid**: Payment confirmed, stock automatically reduced
+            - **confirmed**: Seller confirmed order
+            - **preparing**: Order is being prepared
+            - **ready**: Order ready for pickup/delivery
+            - **completed**: Order completed
+            - **cancelled**: Order cancelled, stock automatically restored
           example: "pending"
         notes:
           type: string
@@ -3780,10 +3918,21 @@ components:
           type: string
           enum: [pending, verified, rejected]
           example: "pending"
+        proof:
+          type: string
+          nullable: true
+          description: |
+            Relative path to payment proof file stored in dual storage system:
+            - storage/app/public/payment-proofs/ (Laravel storage)
+            - public/public_storage/payment-proofs/ (Shared hosting compatible)
+          example: "payment-proofs/proof_123.jpg"
         proof_url:
           type: string
           nullable: true
-          example: "/storage/payment-proofs/proof_123.jpg"
+          description: |
+            Full URL to access payment proof image.
+            Generated automatically from proof field for API responses.
+          example: "http://kaja.test/public_storage/payment-proofs/proof_123.jpg"
         notes:
           type: string
           nullable: true
@@ -3915,7 +4064,10 @@ components:
         attachment_url:
           type: string
           nullable: true
-          example: "/storage/chat-attachments/file_123.jpg"
+          description: |
+            Full URL to attachment file using public_storage path.
+            Generated automatically for API responses with shared hosting compatibility.
+          example: "http://kaja.test/public_storage/chat-attachments/file_123.jpg"
         attachment_name:
           type: string
           nullable: true
